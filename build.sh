@@ -5,3 +5,4 @@ if ! [ -f "mimiq.script" ]; then
 fi
 
 rm -f mimiq && cp mimiq.script mimiq && chmod +x mimiq
+tar -zcvf mimiq.tar.gz mimiq
