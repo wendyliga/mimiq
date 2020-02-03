@@ -1,0 +1,36 @@
+#!/bin/bash
+
+convert_mov_to_gif() {
+  if ! ffmpeg_loc="$(type -p "ffmpeg")" || [[ -z $ffmpeg_loc ]]; then
+    echo "💥 Missing ffmpeg, installing...(This may take a while)"
+    brew install ffmpeg >/dev/null
+  fi
+
+  mov_source="$1"
+  gif_path="$2"
+  
+  if [ -z "$mov_source" ]; then
+    echo "💥 Please enter .mov file Source"
+  elif [ -z "$gif_path" ]; then
+    echo "💥 Please enter gif file Source"
+  else
+    echo ""
+    echo "🔧 Creating GIF..."
+    palette="/tmp/palette.png"
+
+    filters="fps=15,scale=320:-1:flags=lanczos"
+    ffmpeg -v warning -i $mov_source -vf "$filters,palettegen=stats_mode=diff" -y $palette
+    ffmpeg -i $mov_source -i $palette -loglevel panic -lavfi "$filters,paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -y $gif_path &> /dev/null
+
+    echo "✅ Grab your GIF at $2"
+    # clear source
+    rm -f $mov_source
+  fi
+}
+
+if ! homebrew_loc="$(type -p "brew")" || [[ -z $homebrew_loc ]]; then
+    echo "Missing Homebrew, please install Homebrew, for more visit https://brew.sh"
+fi
+
+echo "⚙️ Recording Simulator... (Press control(^) + c to stop recording.)"
+xcrun simctl io booted recordVideo -f ~/video.mov &> /dev/null && convert_mov_to_gif ~/video.mov ~/video.gif
