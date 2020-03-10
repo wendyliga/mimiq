@@ -63,7 +63,10 @@ to stop, just press `control + c`. then grab your gif at your user root path
 ### Result
 
 ![video](https://user-images.githubusercontent.com/16457495/76277173-869b8680-62ba-11ea-94b4-cc28e6785bbf.gif)
+    
+```
 *raft approx 1Mb gif size for 15s
+```
 
 # LICENSE
 ```
