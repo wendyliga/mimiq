@@ -52,7 +52,7 @@ you will get `mimiq` executable, use it as you want
 ```
 mimiq
 ```
-Just simple to call mimiq, it will automatically detect current running simulator and record it for yoy
+Just simple to call mimiq, it will automatically detect current running simulator and record it for you
 
 ## Stop
 ```
