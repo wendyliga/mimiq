@@ -68,6 +68,12 @@ to stop, just press `control + c`. then grab your gif at your user root path
 *raft approx 1Mb gif size for 15s
 ```
 
+# Improvement
+- add option to set the result path
+- set default path to desktop
+- add option to set GIF quality
+- add option to select spesific simulator to record
+
 # LICENSE
 ```
 MIT License
