@@ -22,8 +22,7 @@ brew install wendyliga/core/mimiq
 
 Clone Repo
 ```
-git clone https://github.com/wendyliga/
-.git
+git clone https://github.com/wendyliga/mimiq.git
 ```
 
 execute build script
