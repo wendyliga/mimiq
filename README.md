@@ -20,16 +20,6 @@ brew install mimiq
 ```
 
 ## Manual Install
-### Prebuild
-You can download prebuild executable at [latest release](https://github.com/wendyliga/mimiq/releases) and executing it
-
-```shell
-~/path-to-mimiq/mimiq
-```
-
-if you want to make it as global executable, move mimiq executable into `/usr/local/bin`
-
-### Manual Build
 
 Clone Repo
 ```
@@ -38,10 +28,11 @@ git clone https://github.com/wendyliga/mimiq.git
 
 execute build script
 ```
-~/path-to-mimiq-repo/build.sh
+make install
 ```
 
 you will get `mimiq` executable, use it as you want
+mimiq will installed at `/usr/local/bin`
 
 # How To Use
 
@@ -56,9 +47,9 @@ Just simple to call mimiq, it will automatically detect current running simulato
 
 ## Stop
 ```
-press control + c
+press `enter`
 ```
-to stop, just press `control + c`. then grab your gif at your user root path
+to stop, just press `enter`. then grab your generated gif
 
 ### Result
 
@@ -69,10 +60,16 @@ to stop, just press `control + c`. then grab your gif at your user root path
 ```
 
 # Improvement
-- add option to set the result path
-- set default path to desktop
-- add option to set GIF quality
-- add option to select spesific simulator to record
+- [x] add option to set the result path
+- [x] set default path to desktop
+- [ ] add option to set GIF quality
+- [x] add option to select spesific simulator to record
+
+**New version** is available with this improvement, update your `mimiq` by
+
+```shell
+brew upgrade wendyliga/core/mimiq
+```
 
 # LICENSE
 ```
