@@ -5,7 +5,7 @@ build:
 	swift build -c release --disable-sandbox
 
 install: build
-	install ".build/release/mimiq" "$(bindir)/mimiq"
+	install ".build/release/mimiq" "$(bindir)"
 
 uninstall:
 	rm -rf "$(bindir)/mimiq"
