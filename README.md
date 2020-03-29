@@ -15,15 +15,15 @@ of for more information visit [homebrew](https://brew.sh) website
 install via homebrew
 
 ```shell
-brew tap wendyliga/core
-brew install mimiq
+brew install wendyliga/core/mimiq
 ```
 
 ## Manual Install
 
 Clone Repo
 ```
-git clone https://github.com/wendyliga/mimiq.git
+git clone https://github.com/wendyliga/
+.git
 ```
 
 execute build script
@@ -32,7 +32,7 @@ make install
 ```
 
 you will get `mimiq` executable, use it as you want
-mimiq will installed at `/usr/local/bin`
+`mimiq` will installed at `/usr/local/bin`
 
 # How To Use
 
@@ -43,7 +43,32 @@ mimiq will installed at `/usr/local/bin`
 ```
 mimiq
 ```
-Just simple to call mimiq, it will automatically detect current running simulator and record it for you
+Just simple to call `mimiq`, it will automatically detect current running simulator and record it for you
+
+### Additional Options
+#### Set custom GIF Path
+you can set where `mimiq` will place the generated gif. for default, `mimiq` will generate gif on desktop, but if you want to change it then, when start `mimiq` add this additional params
+
+```shell
+mimiq --path "~/...path/directory/folder"
+```
+
+#### Support Multiple Running Simulator
+if you have multiple running simulator, then you need to spesify which simulator you want to `mimiq`.
+
+get your running simulator by executing
+```shell
+mimiq list
+```
+
+example:
+![Screen Shot 2020-03-29 at 22 01 38](https://user-images.githubusercontent.com/16457495/77852449-fbeadf00-7208-11ea-97bd-86b73d523ca7.jpg)
+
+then record spesific simulato by its `UDID`
+
+```shell
+mimiq --udid 6ABC274C-76BB-483B-8DD6-8A9F8E486E0F
+```
 
 ## Stop
 ```
