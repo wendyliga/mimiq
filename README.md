@@ -62,6 +62,7 @@ mimiq list
 ```
 
 example:
+
 ![Screen Shot 2020-03-29 at 22 01 38](https://user-images.githubusercontent.com/16457495/77852449-fbeadf00-7208-11ea-97bd-86b73d523ca7.jpg)
 
 then record spesific simulato by its `UDID`
