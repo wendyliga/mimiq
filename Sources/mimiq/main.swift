@@ -30,9 +30,12 @@ import Foundation
 // MARK: - Configuration
 
 private let appName = "mimiq"
-private let version = "0.3.0"
+private let version = "0.3.1"
 private let defaultResultPath = "~/Desktop/"
-private let tempFolder = "~/"
+private let documentPath = "~/"
+private let mimiqFolder = documentPath + ".mimiq/"
+private let logFolder = mimiqFolder + "log/"
+private let tempFolder = mimiqFolder + "temp/"
 
 struct Runtime: Decodable {
     let identifier: String
@@ -98,12 +101,12 @@ func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> (status:
 
     let pipe = Pipe()
     task.standardOutput = pipe
+    
     task.launch()
-
+    task.waitUntilExit()
+    
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
     let output = String(data: data, encoding: String.Encoding.utf8)
-
-    task.waitUntilExit()
     
     return (status: task.terminationStatus, output: output)
 }
@@ -137,8 +140,14 @@ func configureEnvironment() -> Result<SingleFolderOperation, Error> {
     let logFolder = Folder(name: "log", contents: [])
     let mimiqFolder = Folder(name: ".mimiq", contents: [movFolder, logFolder])
     
-    let operation = SingleFolderOperation(folder: mimiqFolder, path: tempFolder)
+    let operation = SingleFolderOperation(folder: mimiqFolder, path: documentPath)
     return Explorer.default.write(operation: operation, writingStrategy: .skippable)
+}
+
+func removeCache() {
+    // delete created file
+    // TODO: convert it to Explorer
+    try? FileManager.default.removeItem(atPath: tempFolder)
 }
 
 var isHomebrewInstalled: Bool {
@@ -235,11 +244,24 @@ struct Version: ParsableCommand {
     }
 }
 
+struct Cache: ParsableCommand {
+    static var configuration = CommandConfiguration(
+      commandName: "clear-cache",
+      abstract: "clear all mimiq process cache",
+      discussion: "",
+      helpNames: .long
+    )
+    
+    func run() throws {
+        removeCache()
+    }
+}
+
 struct Mimiq: ParsableCommand {
     init() {}
     
     static var configuration = CommandConfiguration(
-      commandName: "",
+      commandName: appName,
       abstract:
         """
         Record your Xcode simulator and convert it to GIF
@@ -251,7 +273,7 @@ struct Mimiq: ParsableCommand {
         Created by Wendy Liga
         Learn more https://github.com/wendyliga/mimiq
         """,
-      subcommands: [List.self, Version.self],
+      subcommands: [List.self, Version.self, Cache.self],
       helpNames: .long
     )
     
@@ -260,6 +282,9 @@ struct Mimiq: ParsableCommand {
     
     @Option(help: "Select Spesific simulator based on its UDID, run `\(appName) list` to check available simulator")
     var udid: String?
+    
+    @Flag(name: .short, help: "Execute mimiq with verbose log")
+    var isVerbose: Bool
     
     private var resultPath: String {
         guard let customPath = path else {
@@ -329,25 +354,22 @@ struct Mimiq: ParsableCommand {
         
         if !isFFMpegInstalled {
             print("⚙️ Missing ffmpeg, installing...(This may take a while)")
-            shell(arguments: ["brew install ffmpeg >/dev/null"])
+            
+            let command = "brew install ffmpeg" + (isVerbose ? "" : " >/dev/null")
+            shell(arguments: [command])
         }
+            
         
         guard let mimiqTarget = mimiqTarget else {
             print("💥 No Available Simulator to mimiq"); return
         }
         
         // Start Recording
-        
-        let movFileName =  mimiqFileName + ".mov"
-        let movSource = resultPath + movFileName
-        
-        let removeCache: () -> Void = {
-            // delete created file
-            let operation = SingleFileOperation(file: File(name: self.mimiqFileName, content: "", extension: "mov"), path: self.resultPath)
-            Explorer.default.delete(operation: operation)
-        }
+        let movRawFileName = UUID().uuidString
+        let movFileName = movRawFileName + ".mov"
+        let movSource = tempFolder + movFileName
 
-        let recordCommand = "xcrun simctl io \(mimiqTarget.udid.uuidString) recordVideo -f \(movSource) &> /dev/null"
+        let recordCommand = "xcrun simctl io \(mimiqTarget.udid.uuidString) recordVideo -f \(movSource)" + (isVerbose ? "" : " &> /dev/null")
         let recordMessage = "🔨 Recording Simulator \(mimiqTarget.name) with UDID \(mimiqTarget.udid)... Press Enter to Stop.)"
         let recordResult = mustInteruptShell(arguments: [recordCommand], message: recordMessage)
 
@@ -362,16 +384,18 @@ struct Mimiq: ParsableCommand {
         
         let setPallete = #"palette="/tmp/palette.png""#
         let configureFilter = #"filters="fps=15,scale=320:-1:flags=lanczos""#
-        let slicingVideo = #"ffmpeg -v warning -i \#(movSource) -vf "$filters,palettegen=stats_mode=diff" -y $palette"#
-        let createGIF = #"ffmpeg -i \#(movSource) -i $palette -loglevel panic -lavfi "$filters,paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -y \#(gifTargetPath) &> /dev/null"#
-        let generateGIFCommand = [setPallete, configureFilter, slicingVideo, createGIF].joined(separator: ";")
-
-        // clear generated cache
-        removeCache()
+        let slicingVideo = #"ffmpeg -nostdin -v warning -i \#(movSource) -vf "$filters,palettegen=stats_mode=diff" -y $palette"# + (isVerbose ? "" : " &> /dev/null")
+        let createGIF = #"ffmpeg -nostdin -i \#(movSource) -i $palette -loglevel panic -lavfi "$filters,paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -y \#(gifTargetPath)"# + (isVerbose ? "" : " &> /dev/null")
+        let generateGIFCommand = [setPallete, configureFilter , slicingVideo, createGIF].joined(separator: ";")
         
         guard shell(arguments: [generateGIFCommand]).status == 0 else {
+            // clear generated cache
+            removeCache()
             print("💥 Failed on Creating GIF, Please Try Again"); return
         }
+        
+        // clear generated cache
+        removeCache()
         
         print("✅ Grab your GIF at \(gifTargetPath)")
         

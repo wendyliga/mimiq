@@ -2,7 +2,7 @@ prefix ?= /usr/local
 bindir = $(prefix)/bin
 
 build:
-	swift build -c release --disable-sandbox
+	swift build -c release
 
 install: build
 	mkdir -p "$(bindir)"
