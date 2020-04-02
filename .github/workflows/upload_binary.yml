@@ -11,8 +11,8 @@ jobs:
     name: Upload Binary
     runs-on: macos-latest
     steps:
-    - name: Checkout Tags
-      uses: actions/checkout@v1
+    - name: Checkout
+      uses: actions/checkout@v2
     - name: Build Binary
       uses: make build
     - name: Upload binaries to release
