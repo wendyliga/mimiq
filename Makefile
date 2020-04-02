@@ -13,5 +13,7 @@ uninstall:
 
 clean:
 	rm -rf .build
+	# clear all cache and logging
+	rm -rf ~/.mimiq
 
 .PHONY: build install uninstall clean

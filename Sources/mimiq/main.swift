@@ -30,12 +30,54 @@ import Foundation
 // MARK: - Configuration
 
 private let appName = "mimiq"
-private let version = "0.3.1"
+private let version = "0.3.3"
+
+// Environment setup params
 private let defaultResultPath = "~/Desktop/"
 private let documentPath = "~/"
 private let mimiqFolder = documentPath + ".mimiq/"
 private let logFolder = mimiqFolder + "log/"
 private let tempFolder = mimiqFolder + "temp/"
+
+// MARK: - Logging
+
+class Log {
+    static let `default` = Log()
+    
+    private let dateFormatter = DateFormatter()
+    private let logFileName: String
+    private let logFileExtension = "log"
+    private var logs: [String] = []
+    
+    init() {
+        // Log file name
+        dateFormatter.dateFormat = "yyyyMMddHHmmss"
+        logFileName = dateFormatter.string(from: Date())
+    }
+    
+    @discardableResult
+    func write(message: String, printOut: Bool = false) -> Result<Bool, Error> {
+        if printOut {
+            print(message)
+        }
+        
+        dateFormatter.dateFormat = "HH:mm:ss"
+        let newLog = "[\(dateFormatter.string(from: Date()))] \(message)"
+        logs.append(newLog)
+        
+        let file = File(name: logFileName, content: logs.joined(separator: "\n"), extension: logFileExtension)
+        let operation = SingleFileOperation(file: file, path: logFolder)
+        
+        let writeOperationResult = Explorer.default.write(operation: operation, writingStrategy: .overwrite)
+        guard writeOperationResult.successValue != nil else {
+            return .failure(writeOperationResult.failureValue!)
+        }
+        
+        return .success(true)
+    }
+}
+
+// MARK: - Simulator List Struct
 
 struct Runtime: Decodable {
     let identifier: String
@@ -45,6 +87,8 @@ struct Simulator: Decodable {
     let udid: UUID
     let name: String
 }
+
+// MARK: - Json Encoder Extension
 
 extension JSONDecoder {
     func decode<T: Decodable>(_ type: T.Type, from data: Data, keyPath: String) throws -> T {
@@ -58,6 +102,8 @@ extension JSONDecoder {
         }
     }
 }
+
+// MARK: - String Extension
 
 extension String {
     /**
@@ -85,13 +131,31 @@ extension String {
     }
 }
 
-func explorableMimiqFilename(_ explorable: Explorable) -> String? {
-    guard let file = explorable as? File else {
-        return nil
-    }
+// MARK: - Setup Environment
+
+func configureEnvironment() -> Result<SingleFolderOperation, Error> {
+    let tempFolder = Folder(name: "temp", contents: [])
+    let logFolder = Folder(name: "log", contents: [])
+    let mimiqFolder = Folder(name: ".mimiq", contents: [tempFolder, logFolder])
     
-    return file.name.hasPrefix("mimiq") ? file.name : nil
+    let operation = SingleFolderOperation(folder: mimiqFolder, path: documentPath)
+    return Explorer.default.write(operation: operation, writingStrategy: .skippable)
 }
+
+// MARK: - Remove Cache
+
+func removeCache() {
+    // delete created file
+    // TODO: convert it to Explorer
+    do {
+        try FileManager.default.removeItem(atPath: tempFolder)
+        Log.default.write(message: "success remove cache at \(tempFolder)")
+    } catch {
+        Log.default.write(message: "error remove because \(error.localizedDescription)")
+    }
+}
+
+// MARK: - Shell Command
 
 @discardableResult
 func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> (status: Int32, output: String?) {
@@ -101,6 +165,7 @@ func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> (status:
 
     let pipe = Pipe()
     task.standardOutput = pipe
+    task.standardError = pipe
     
     task.launch()
     task.waitUntilExit()
@@ -118,6 +183,7 @@ func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String],
 
     let pipe = Pipe()
     task.standardOutput = pipe
+    task.standardError = pipe
     
     DispatchQueue.global(qos: .background).async {
         task.launch()
@@ -133,21 +199,6 @@ func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String],
     let output = String(data: data, encoding: String.Encoding.utf8)
     
     return (status: task.terminationStatus, output: output)
-}
-
-func configureEnvironment() -> Result<SingleFolderOperation, Error> {
-    let movFolder = Folder(name: "mov", contents: [])
-    let logFolder = Folder(name: "log", contents: [])
-    let mimiqFolder = Folder(name: ".mimiq", contents: [movFolder, logFolder])
-    
-    let operation = SingleFolderOperation(folder: mimiqFolder, path: documentPath)
-    return Explorer.default.write(operation: operation, writingStrategy: .skippable)
-}
-
-func removeCache() {
-    // delete created file
-    // TODO: convert it to Explorer
-    try? FileManager.default.removeItem(atPath: tempFolder)
 }
 
 var isHomebrewInstalled: Bool {
@@ -302,7 +353,13 @@ struct Mimiq: ParsableCommand {
         
         // get last increment number
         let fileWithMimiqPrefix = listFiles
-            .compactMap(explorableMimiqFilename)
+            .compactMap { explorable -> String? in
+                guard let file = explorable as? File else {
+                    return nil
+                }
+                
+                return file.name.hasPrefix("mimiq") ? file.name : nil
+            }
             
         let lastMimiqIncrementNumber = fileWithMimiqPrefix
             .compactMap { Int($0.withoutPrefix("mimiq")) }
@@ -339,66 +396,107 @@ struct Mimiq: ParsableCommand {
     }
     
     func run() throws {
+        log("mimiq start to run")
+        
         #if os(Linux)
             print("\(appName) is not support linux yet")
+            log("mimiq is running on linux", printOut: isVerbose)
             return
         #endif
         
+        log("mimiq is running on mac")
+        
         guard configureEnvironment().successValue != nil else {
+            log("failed setup environment")
             print("💥 Failed to Setup Enviroment"); return
         }
         
+        log("environment setup success")
+        
         guard isHomebrewInstalled else {
+            log("missing homebrew")
             print("💥 Missing Homebrew, please install Homebrew, for more visit https://brew.sh"); return
         }
         
+        log("Homebrew is installed")
+        
         if !isFFMpegInstalled {
-            print("⚙️ Missing ffmpeg, installing...(This may take a while)")
+            log("missing ffmpeg")
+            print("⚙️  Missing ffmpeg, installing...(This may take a while)")
             
-            let command = "brew install ffmpeg" + (isVerbose ? "" : " >/dev/null")
-            shell(arguments: [command])
+            log("installing ffmpeg")
+            let command = "brew install ffmpeg"
+            let installFFMpegResult = shell(arguments: [command])
+            
+            guard installFFMpegResult.status == 0 else {
+                log("error install mmpeg: \(installFFMpegResult.output as Optional)")
+                print("💥 failed install ffmpeg"); return
+            }
+            
+            log("success install ffmpeg: \(installFFMpegResult.output as Optional)")
         }
             
         
         guard let mimiqTarget = mimiqTarget else {
+            log("no available simulator")
             print("💥 No Available Simulator to mimiq"); return
         }
+        
+        log("simulator target \(mimiqTarget)")
         
         // Start Recording
         let movRawFileName = UUID().uuidString
         let movFileName = movRawFileName + ".mov"
         let movSource = tempFolder + movFileName
+        
+        log("simulator to record on \(movSource)")
 
-        let recordCommand = "xcrun simctl io \(mimiqTarget.udid.uuidString) recordVideo -f \(movSource)" + (isVerbose ? "" : " &> /dev/null")
+        let recordCommand = "xcrun simctl io \(mimiqTarget.udid.uuidString) recordVideo -f \(movSource)"
         let recordMessage = "🔨 Recording Simulator \(mimiqTarget.name) with UDID \(mimiqTarget.udid)... Press Enter to Stop.)"
+        log(#"start recording with command "\#(recordCommand)""#)
         let recordResult = mustInteruptShell(arguments: [recordCommand], message: recordMessage)
 
+        log("record simulator finish with status \(recordResult.status)")
         guard recordResult.status == 0 else {
             removeCache()
+            log("error record simulator: \(recordResult.output as Optional)")
             print("💥 Record Failed, Please Try Again"); return
         }
-
-        print("⚙️ Creating GIF..")
+        
+        log("stop recording")
+        log("start creating GIF")
+        print("⚙️  Creating GIF..")
         
         let gifTargetPath = resultPath + mimiqFileName + ".gif"
+        log("GIF will be created on \(gifTargetPath)")
         
         let setPallete = #"palette="/tmp/palette.png""#
         let configureFilter = #"filters="fps=15,scale=320:-1:flags=lanczos""#
         let slicingVideo = #"ffmpeg -nostdin -v warning -i \#(movSource) -vf "$filters,palettegen=stats_mode=diff" -y $palette"# + (isVerbose ? "" : " &> /dev/null")
-        let createGIF = #"ffmpeg -nostdin -i \#(movSource) -i $palette -loglevel panic -lavfi "$filters,paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -y \#(gifTargetPath)"# + (isVerbose ? "" : " &> /dev/null")
+        let createGIF = #"ffmpeg -nostdin -i \#(movSource) -i $palette -loglevel panic -lavfi "$filters,paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -y \#(gifTargetPath)"#
         let generateGIFCommand = [setPallete, configureFilter , slicingVideo, createGIF].joined(separator: ";")
+        log(#"executing ffmpeg with command "\#(generateGIFCommand)""#)
         
-        guard shell(arguments: [generateGIFCommand]).status == 0 else {
+        let generateGIFResult = shell(arguments: [generateGIFCommand])
+        
+        guard generateGIFResult.status == 0 else {
             // clear generated cache
             removeCache()
+            log("error generating GIF: \(generateGIFResult.output as Optional)")
             print("💥 Failed on Creating GIF, Please Try Again"); return
         }
+        
+        log(#"success generating GIF: \#(generateGIFResult.output as Optional)"#)
         
         // clear generated cache
         removeCache()
         
+        log("GIF generated at \(gifTargetPath)")
         print("✅ Grab your GIF at \(gifTargetPath)")
-        
+    }
+    
+    private func log(_ message: String) {
+        Log.default.write(message: message, printOut: isVerbose)
     }
 }
 
