@@ -406,6 +406,9 @@ struct Mimiq: ParsableCommand {
         
         log("mimiq is running on mac")
         
+        // log computer info, like os version
+        logShellOutput(shell(arguments: ["sw_vers"]).output)
+        
         guard configureEnvironment().successValue != nil else {
             log("failed setup environment")
             print("💥 Failed to Setup Enviroment"); return
@@ -419,6 +422,8 @@ struct Mimiq: ParsableCommand {
         }
         
         log("Homebrew is installed")
+        logShellOutput(shell(arguments: ["brew --version"]).output)
+        logShellOutput(shell(arguments: ["brew list"]).output)
         
         if !isFFMpegInstalled {
             log("missing ffmpeg")
@@ -429,14 +434,16 @@ struct Mimiq: ParsableCommand {
             let installFFMpegResult = shell(arguments: [command])
             
             guard installFFMpegResult.status == 0 else {
-                log("error install mmpeg: \(installFFMpegResult.output as Optional)")
+                log("error install mmpeg")
+                logShellOutput(installFFMpegResult.output)
+                logShellOutput(shell(arguments: ["brew doctor"]).output)
                 print("💥 failed install ffmpeg"); return
             }
             
-            log("success install ffmpeg: \(installFFMpegResult.output as Optional)")
+            log("success install ffmpeg")
+            logShellOutput(installFFMpegResult.output)
         }
             
-        
         guard let mimiqTarget = mimiqTarget else {
             log("no available simulator")
             print("💥 No Available Simulator to mimiq"); return
@@ -450,6 +457,8 @@ struct Mimiq: ParsableCommand {
         let movSource = tempFolder + movFileName
         
         log("simulator to record on \(movSource)")
+        // log xcode version
+        logShellOutput(shell(arguments: ["xcodebuild -version"]).output)
 
         let recordCommand = "xcrun simctl io \(mimiqTarget.udid.uuidString) recordVideo -f \(movSource)"
         let recordMessage = "🔨 Recording Simulator \(mimiqTarget.name) with UDID \(mimiqTarget.udid)... Press Enter to Stop.)"
@@ -459,7 +468,8 @@ struct Mimiq: ParsableCommand {
         log("record simulator finish with status \(recordResult.status)")
         guard recordResult.status == 0 else {
             removeCache()
-            log("error record simulator: \(recordResult.output as Optional)")
+            log("error record simulator")
+            logShellOutput(recordResult.output)
             print("💥 Record Failed, Please Try Again"); return
         }
         
@@ -472,8 +482,8 @@ struct Mimiq: ParsableCommand {
         
         let setPallete = #"palette="/tmp/palette.png""#
         let configureFilter = #"filters="fps=15,scale=320:-1:flags=lanczos""#
-        let slicingVideo = #"ffmpeg -nostdin -v warning -i \#(movSource) -vf "$filters,palettegen=stats_mode=diff" -y $palette"# + (isVerbose ? "" : " &> /dev/null")
-        let createGIF = #"ffmpeg -nostdin -i \#(movSource) -i $palette -loglevel panic -lavfi "$filters,paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -y \#(gifTargetPath)"#
+        let slicingVideo = #"ffmpeg -nostdin -v warning -i \#(movSource) -vf "$filters,palettegen=stats_mode=diff" -y $palette"#
+        let createGIF = #"ffmpeg -nostdin -i \#(movSource) -i $palette -lavfi "$filters,paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -y \#(gifTargetPath)"#
         let generateGIFCommand = [setPallete, configureFilter , slicingVideo, createGIF].joined(separator: ";")
         log(#"executing ffmpeg with command "\#(generateGIFCommand)""#)
         
@@ -482,11 +492,14 @@ struct Mimiq: ParsableCommand {
         guard generateGIFResult.status == 0 else {
             // clear generated cache
             removeCache()
-            log("error generating GIF: \(generateGIFResult.output as Optional)")
+            log("error generating GIF")
+            logShellOutput(generateGIFResult.output)
+            
             print("💥 Failed on Creating GIF, Please Try Again"); return
         }
         
-        log(#"success generating GIF: \#(generateGIFResult.output as Optional)"#)
+        log("success generating GIF")
+        logShellOutput(generateGIFResult.output)
         
         // clear generated cache
         removeCache()
@@ -497,6 +510,14 @@ struct Mimiq: ParsableCommand {
     
     private func log(_ message: String) {
         Log.default.write(message: message, printOut: isVerbose)
+    }
+    
+    private func logShellOutput(_ output: String?) {
+        guard let output = output else { return }
+        
+        output.split(separator: "\n").forEach { eachLine in
+            log(String(eachLine))
+        }
     }
 }
 
