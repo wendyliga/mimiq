@@ -7,7 +7,7 @@ on:
       - '*'
 
 jobs:
-  build:
+  upload_binary:
     name: Upload Binary
     runs-on: macos-latest
     steps:
