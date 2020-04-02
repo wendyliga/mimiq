@@ -1,0 +1,23 @@
+name: Upload Binary
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    name: Upload Binary
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build Binary
+      uses: swift build -c release --disable-sandbox
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: .build/release/mimiq
+        asset_name: mimiq
+        tag: ${{ github.ref }}
+        overwrite: true
