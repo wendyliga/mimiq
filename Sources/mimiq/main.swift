@@ -147,12 +147,7 @@ func configureEnvironment() -> Result<SingleFolderOperation, Error> {
 func removeCache() {
     // delete created file
     // TODO: convert it to Explorer
-    do {
-        try FileManager.default.removeItem(atPath: tempFolder)
-        Log.default.write(message: "success remove cache at \(tempFolder)")
-    } catch {
-        Log.default.write(message: "error remove because \(error.localizedDescription)")
-    }
+    Log.default.write(message: #"remove temp folder output \#(shell(arguments: ["rm -rf \(tempFolder)"]))"#)
 }
 
 // MARK: - Shell Command
@@ -423,7 +418,6 @@ struct Mimiq: ParsableCommand {
         
         log("Homebrew is installed")
         logShellOutput(shell(arguments: ["brew --version"]).output)
-        logShellOutput(shell(arguments: ["brew list"]).output)
         
         if !isFFMpegInstalled {
             log("missing ffmpeg")
