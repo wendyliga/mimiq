@@ -10,7 +10,8 @@ jobs:
     name: Upload Binary
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v1
+    - name: Checkout Tags
+      uses: actions/checkout@v1
     - name: Build Binary
       uses: swift build -c release --disable-sandbox
     - name: Upload binaries to release
