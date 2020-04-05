@@ -1,11 +1,22 @@
 # mimiq
 
-[![Build Status](https://github.com/wendyliga/mimiq/workflows/Mimiq%20CI/badge.svg?branch=master)](https://github.com/wendyliga/mimiq/actions)
-<img src="https://img.shields.io/badge/Made%20with-Swift-orange" />
-![GitHub](https://img.shields.io/github/license/wendyliga/mimiq)
-<a href="https://twitter.com/wendyliga">
-    <img src="https://img.shields.io/badge/contact-@wendyliga-blue.svg?style=flat" alt="Twitter: @wendyliga" />
-</a>
+![mimiq](https://user-images.githubusercontent.com/16457495/78473788-84b7cc80-776d-11ea-8c44-5d6c8e46f2cb.png)
+
+<p align="center">
+    <a href="https://github.com/wendyliga/mimiq/actions">
+        <img src="https://github.com/wendyliga/mimiq/workflows/Mimiq%20CI/badge.svg?branch=master" alt="Build Status" />
+    </a>
+    <a href="#">
+        <img src="https://img.shields.io/badge/Made%20with-Swift-orange" />
+    </a>
+    <a href="#">
+        <img src="https://img.shields.io/github/license/wendyliga/mimiq" />
+    </a>
+    <a href="https://twitter.com/wendyliga">
+        <img src="https://img.shields.io/badge/contact-@wendyliga-blue.svg?style=flat" alt="Twitter: @wendyliga" />
+    </a>
+</p>
+
 
 mimiq is simple executable to record your Xcode simulator and convert it to GIF.
 
