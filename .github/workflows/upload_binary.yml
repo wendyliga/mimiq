@@ -15,11 +15,15 @@ jobs:
       uses: actions/checkout@v2
     - name: Build Binary
       uses: make build
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v1-release
+    - name: Create release
+      uses: Roang-zero1/github-create-release-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create GitHub release
+      uses: Roang-zero1/github-upload-release-artifacts-action@master
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: .build/release/mimiq
-        asset_name: mimiq
-        tag: ${{ github.ref }}
-        overwrite: true
+        args:
+        - dist/bin/
+        - dist/shell/compiled.sh
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
