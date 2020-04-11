@@ -23,7 +23,6 @@
  */
 
 import ArgumentParser
-import ConsoleIO
 import Explorer
 import Foundation
 
@@ -38,6 +37,7 @@ private let documentPath = "~/"
 private let mimiqFolder = documentPath + ".mimiq/"
 private let logFolder = mimiqFolder + "log/"
 private let tempFolder = mimiqFolder + "temp/"
+private let shellProvider = DefaultShellProvider.shared
 
 // MARK: - Logging
 
@@ -56,7 +56,7 @@ class Log {
     }
     
     @discardableResult
-    func write(message: String, printOut: Bool = false) -> Result<Bool, Error> {
+    func write(_ message: String, printOut: Bool = false) -> Result<Bool, Error> {
         if printOut {
             print(message)
         }
@@ -77,60 +77,6 @@ class Log {
     }
 }
 
-// MARK: - Simulator List Struct
-
-struct Runtime: Decodable {
-    let identifier: String
-}
-
-struct Simulator: Decodable {
-    let udid: UUID
-    let name: String
-}
-
-// MARK: - Json Encoder Extension
-
-extension JSONDecoder {
-    func decode<T: Decodable>(_ type: T.Type, from data: Data, keyPath: String) throws -> T {
-        let toplevel = try JSONSerialization.jsonObject(with: data)
-        
-        if let nestedJson = (toplevel as AnyObject).value(forKeyPath: keyPath) {
-            let nestedJsonData = try JSONSerialization.data(withJSONObject: nestedJson)
-            return try decode(type, from: nestedJsonData)
-        } else {
-            throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Nested json not found for key path \"\(keyPath)\""))
-        }
-    }
-}
-
-// MARK: - String Extension
-
-extension String {
-    /**
-     Remove file extension from filename
-     */
-    func withoutExtension(replaceWith newString: String = "") -> String {
-        var dotIndex: Int?
-        var isDotFound = false
-        
-        for (index, character) in self.enumerated().reversed() {
-            guard !isDotFound else { break }
-            
-            if character == "." && !isDotFound {
-                dotIndex = index
-                isDotFound = true
-            }
-        }
-        
-        guard let unwarpDotIndex = dotIndex else {
-            return self
-        }
-        
-        let startDotIndex = index(startIndex, offsetBy: unwarpDotIndex)
-        return replacingCharacters(in: startDotIndex..<endIndex, with: newString)
-    }
-}
-
 // MARK: - Setup Environment
 
 func configureEnvironment() -> Result<SingleFolderOperation, Error> {
@@ -147,111 +93,7 @@ func configureEnvironment() -> Result<SingleFolderOperation, Error> {
 func removeCache() {
     // delete created file
     // TODO: convert it to Explorer
-    Log.default.write(message: #"remove temp folder output \#(shell(arguments: ["rm -rf \(tempFolder)"]))"#)
-}
-
-// MARK: - Shell Command
-
-@discardableResult
-func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> (status: Int32, output: String?) {
-    let task = Process()
-    task.launchPath = launchPath
-    task.arguments = ["bash", "-c"] + arguments
-
-    let pipe = Pipe()
-    task.standardOutput = pipe
-    task.standardError = pipe
-    
-    task.launch()
-    task.waitUntilExit()
-    
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    let output = String(data: data, encoding: String.Encoding.utf8)
-    
-    return (status: task.terminationStatus, output: output)
-}
-
-func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String], message: String) -> (status: Int32, output: String?) {
-    let task = Process()
-    task.launchPath = launchPath
-    task.arguments = ["bash", "-c"] + arguments
-
-    let pipe = Pipe()
-    task.standardOutput = pipe
-    task.standardError = pipe
-    
-    DispatchQueue.global(qos: .background).async {
-        task.launch()
-    }
-    
-    input(message, defaultValue: "", afterValidation: { _ in
-        task.interrupt()
-    })
-    
-    task.waitUntilExit()
-    
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    let output = String(data: data, encoding: String.Encoding.utf8)
-    
-    return (status: task.terminationStatus, output: output)
-}
-
-var isHomebrewInstalled: Bool {
-    shell(arguments: [#"! homebrew_loc="$(type -p "brew")" || [[ -z $homebrew_loc ]];"#]).status == 1
-}
-
-var isFFMpegInstalled: Bool {
-    shell(arguments: [#"! ffmpeg_loc="$(type -p "ffmpeg")" || [[ -z $ffmpeg_loc ]];"#]).status == 1
-}
-
-var simulators: [Simulator] {
-    let simulatorRuntimeListShellExecution = shell(arguments: ["xcrun simctl list -v runtimes --json"])
-    guard
-        simulatorRuntimeListShellExecution.status == 0,
-        let runtimeListRawData = simulatorRuntimeListShellExecution.output?.data(using: .utf8),
-        let runtimes = try? JSONDecoder().decode([Runtime].self, from: runtimeListRawData, keyPath: "runtimes")
-    else {
-        return []
-    }
-    /**
-     
-     because json structer from simctl looks like this
-     
-     {
-       "devices" : {
-         "com.apple.CoreSimulator.SimRuntime.tvOS-13-3" : [
-            ... list devices ...
-         ],
-         "com.apple.CoreSimulator.SimRuntime.watchOS-6-1" : [
-            ... list devices ...
-         ],
-       }
-     }
-     
-     there's no way to map inside device json object with decodable, so JSONSerialization comes in help
-     */
-    
-    let simulatorListShellExecution = shell(arguments: ["xcrun simctl list -v devices booted --json"])
-    guard
-        simulatorListShellExecution.status == 0,
-        let simulatorListRawData = simulatorListShellExecution.output?.data(using: .utf8),
-        let simulatorListJsonSerialization = try? JSONSerialization.jsonObject(with: simulatorListRawData, options: .allowFragments) as? [String: Any],
-        let deviceJsonSeralization = simulatorListJsonSerialization["devices"] as? [String: [[String: Any]]]
-    else {
-        return []
-    }
-    
-    return runtimes.map { runtime -> [Simulator] in
-        guard let devices = deviceJsonSeralization[runtime.identifier] else { return [] }
-        
-        return devices.compactMap { device -> Simulator? in
-            guard let deviceUdidRawValue = device["udid"] as? String, let udid = UUID(uuidString: deviceUdidRawValue), let name = device["name"] as? String else {
-                return nil
-            }
-            
-            return Simulator(udid: udid, name: name)
-        }
-    }.flatMap { $0 }
+    Log.default.write(#"remove temp folder output \#(shell(arguments: ["rm -rf \(tempFolder)"]))"#)
 }
 
 // MARK: - Argument
@@ -265,13 +107,13 @@ struct List: ParsableCommand {
     )
     
     func run() throws {
-        let availableSimulators = simulators
+        let availableSimulators = shellProvider.availableSimulators
         guard availableSimulators.isNotEmpty else {
             print("💥 No Available Simulator to mimiq"); return
         }
         
         print("Available Simulator to mimiq: ")
-        simulators.forEach { simulator in
+        availableSimulators.forEach { simulator in
             print("✅ \(simulator.udid) \(simulator.name)")
         }
     }
@@ -375,7 +217,7 @@ struct Mimiq: ParsableCommand {
     }
     
     private var mimiqTarget: Simulator? {
-        let availableSimulator = simulators
+        let availableSimulator = shellProvider.availableSimulators
         
         guard availableSimulator.isNotEmpty else {
             return nil
@@ -393,6 +235,8 @@ struct Mimiq: ParsableCommand {
     func run() throws {
         log("mimiq start to run")
         
+        // MARK: - Check Not Linux
+        
         #if os(Linux)
             print("\(appName) is not support linux yet")
             log("mimiq is running on linux", printOut: isVerbose)
@@ -404,6 +248,8 @@ struct Mimiq: ParsableCommand {
         // log computer info, like os version
         logShellOutput(shell(arguments: ["sw_vers"]).output)
         
+        // MARK: - Configure Environment
+        
         guard configureEnvironment().successValue != nil else {
             log("failed setup environment")
             print("💥 Failed to Setup Enviroment"); return
@@ -411,7 +257,9 @@ struct Mimiq: ParsableCommand {
         
         log("environment setup success")
         
-        guard isHomebrewInstalled else {
+        // MARK: - Check Homebrew Installed
+        
+        guard shellProvider.isHomebrewInstalled else {
             log("missing homebrew")
             print("💥 Missing Homebrew, please install Homebrew, for more visit https://brew.sh"); return
         }
@@ -419,7 +267,9 @@ struct Mimiq: ParsableCommand {
         log("Homebrew is installed")
         logShellOutput(shell(arguments: ["brew --version"]).output)
         
-        if !isFFMpegInstalled {
+        // MARK: - Check FFMpeg Installed
+        
+        if !shellProvider.isFFMpegInstalled {
             log("missing ffmpeg")
             print("⚙️  Missing ffmpeg, installing...(This may take a while)")
             
@@ -437,7 +287,9 @@ struct Mimiq: ParsableCommand {
             log("success install ffmpeg")
             logShellOutput(installFFMpegResult.output)
         }
-            
+        
+        // MARK: - Unwarp Mimiq Target
+        
         guard let mimiqTarget = mimiqTarget else {
             log("no available simulator")
             print("💥 No Available Simulator to mimiq"); return
@@ -445,19 +297,15 @@ struct Mimiq: ParsableCommand {
         
         log("simulator target \(mimiqTarget)")
         
-        // Start Recording
-        let movRawFileName = UUID().uuidString
-        let movFileName = movRawFileName + ".mov"
-        let movSource = tempFolder + movFileName
+        // MARK: - Record Simulator
+        
+        // mov path
+        let movSource = tempFolder + UUID().uuidString + ".mov"
         
         log("simulator to record on \(movSource)")
-        // log xcode version
-        logShellOutput(shell(arguments: ["xcodebuild -version"]).output)
-
-        let recordCommand = "xcrun simctl io \(mimiqTarget.udid.uuidString) recordVideo -f \(movSource)"
-        let recordMessage = "🔨 Recording Simulator \(mimiqTarget.name) with UDID \(mimiqTarget.udid)... Press Enter to Stop.)"
-        log(#"start recording with command "\#(recordCommand)""#)
-        let recordResult = mustInteruptShell(arguments: [recordCommand], message: recordMessage)
+        logShellOutput(shell(arguments: ["xcodebuild -version"]).output) // log xcode version
+        
+        let recordResult = shellProvider.recordSimulator(target: mimiqTarget, movTarget: movSource, printOutLog: isVerbose)
 
         log("record simulator finish with status \(recordResult.status)")
         guard recordResult.status == 0 else {
@@ -468,20 +316,14 @@ struct Mimiq: ParsableCommand {
         }
         
         log("stop recording")
+        
+        // MARK: - Convert Mov to Gif
+        
         log("start creating GIF")
         print("⚙️  Creating GIF..")
         
         let gifTargetPath = resultPath + mimiqFileName + ".gif"
-        log("GIF will be created on \(gifTargetPath)")
-        
-        let setPallete = #"palette="/tmp/palette.png""#
-        let configureFilter = #"filters="fps=15,scale=320:-1:flags=lanczos""#
-        let slicingVideo = #"ffmpeg -nostdin -v warning -i \#(movSource) -vf "$filters,palettegen=stats_mode=diff" -y $palette"#
-        let createGIF = #"ffmpeg -nostdin -i \#(movSource) -i $palette -lavfi "$filters,paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -y \#(gifTargetPath)"#
-        let generateGIFCommand = [setPallete, configureFilter , slicingVideo, createGIF].joined(separator: ";")
-        log(#"executing ffmpeg with command "\#(generateGIFCommand)""#)
-        
-        let generateGIFResult = shell(arguments: [generateGIFCommand])
+        let generateGIFResult = shellProvider.convertMovToGif(movSource: movSource, gifTarget: gifTargetPath, printOutLog: isVerbose)
         
         guard generateGIFResult.status == 0 else {
             // clear generated cache
@@ -495,15 +337,14 @@ struct Mimiq: ParsableCommand {
         log("success generating GIF")
         logShellOutput(generateGIFResult.output)
         
-        // clear generated cache
-        removeCache()
+        removeCache() // clear generated cache
         
         log("GIF generated at \(gifTargetPath)")
         print("✅ Grab your GIF at \(gifTargetPath)")
     }
     
     private func log(_ message: String) {
-        Log.default.write(message: message, printOut: isVerbose)
+        Log.default.write(message, printOut: isVerbose)
     }
     
     private func logShellOutput(_ output: String?) {
