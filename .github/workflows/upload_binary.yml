@@ -13,13 +13,21 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Zipping Binary
+    - name: Compress Binary
       run: make compress
-    - name: Upload binaries to release
+    - name: Upload Tar binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: .build/mimiq.tar.gz
         asset_name: mimiq.tar.gz
+        tag: ${{ github.ref }}
+        overwrite: true
+    - name: Upload Zip binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: .build/mimiq.zip
+        asset_name: mimiq.zip
         tag: ${{ github.ref }}
         overwrite: true
