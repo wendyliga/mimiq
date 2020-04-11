@@ -37,7 +37,6 @@ private let documentPath = "~/"
 private let mimiqFolder = documentPath + ".mimiq/"
 private let logFolder = mimiqFolder + "log/"
 private let tempFolder = mimiqFolder + "temp/"
-private let shellProvider = DefaultShellProvider.shared
 
 // MARK: - Logging
 
@@ -102,11 +101,35 @@ struct List: ParsableCommand {
     static var configuration = CommandConfiguration(
       commandName: "list",
       abstract: "List Available Simulator",
-      discussion: "",
-      helpNames: .long
+      discussion: ""
     )
     
+    #if DEBUG
+    enum Mode: String, ExpressibleByArgument {
+        case available
+        case none
+        
+        var shellProvider: ShellProvider {
+            switch self {
+            case .available:
+                return AvailableSimulatorShellProvider()
+            case .none:
+                return NoneSimulatorShellProvider()
+            }
+        }
+    }
+    
+    @Option(name: .long, help: "Mock Mode For Testing Purpose")
+    var mode: Mode?
+    #endif
+    
     func run() throws {
+        #if DEBUG
+        let shellProvider: ShellProvider = mode != nil ? mode!.shellProvider : DefaultShellProvider.shared
+        #else
+        let shellProvider = DefaultShellProvider.shared
+        #endif
+        
         let availableSimulators = shellProvider.availableSimulators
         guard availableSimulators.isNotEmpty else {
             print("💥 No Available Simulator to mimiq"); return
@@ -123,8 +146,7 @@ struct Version: ParsableCommand {
     static var configuration = CommandConfiguration(
       commandName: "version",
       abstract: "\(appName) version",
-      discussion: "",
-      helpNames: .long
+      discussion: ""
     )
     
     func run() throws {
@@ -136,8 +158,7 @@ struct Cache: ParsableCommand {
     static var configuration = CommandConfiguration(
       commandName: "clear-cache",
       abstract: "clear all mimiq process cache",
-      discussion: "",
-      helpNames: .long
+      discussion: ""
     )
     
     func run() throws {
@@ -145,25 +166,35 @@ struct Cache: ParsableCommand {
     }
 }
 
-struct Mimiq: ParsableCommand {
+struct Record: ParsableCommand {
     init() {}
     
+    #if DEBUG
     static var configuration = CommandConfiguration(
-      commandName: appName,
+        commandName: "record",
+        abstract:
+        """
+
+        Record your Xcode simulator and convert it to GIF
+        """,
+        discussion:
+        """
+        mode for testing purpose:
+        \(Mode.allCases
+            .map { "- " + $0.rawValue }
+            .joined(separator: "\n"))
+        """
+    )
+    #else
+    static var configuration = CommandConfiguration(
+      commandName: "record",
       abstract:
         """
         Record your Xcode simulator and convert it to GIF
-        """,
-      discussion:
-        """
-        \(appName) \(version)
         
-        Created by Wendy Liga
-        Learn more https://github.com/wendyliga/mimiq
-        """,
-      subcommands: [List.self, Version.self, Cache.self],
-      helpNames: .long
+        """
     )
+    #endif
     
     @Option(help: "Destination path you want to place \(appName) generated GIF")
     var path: String?
@@ -174,6 +205,53 @@ struct Mimiq: ParsableCommand {
     @Flag(name: .short, help: "Execute mimiq with verbose log")
     var isVerbose: Bool
     
+    #if DEBUG
+    enum Mode: String, ExpressibleByArgument, CaseIterable {
+        case noHomebrew
+        case noFFMpeg
+        case noSimulator
+        case failRecord
+        case failMakeGIF
+        case success
+        
+        var shellProvider: ShellProvider {
+            switch self {
+            case .noHomebrew:
+                return NoHomebrewShellProvider()
+            case .noFFMpeg:
+                return NoFFMpegShellProvider()
+            case .noSimulator:
+                return NoneSimulatorShellProvider()
+            case .failRecord:
+                return FailedRecordShellProvider()
+            case .failMakeGIF:
+                return FailedConvertingGIFShellProvider()
+            case .success:
+                return SuccessShellProvider()
+            }
+        }
+    }
+    
+    @Option(name: .long, help: "Mock Mode For Testing Purpose")
+    var mode: Mode?
+    #endif
+    
+    /**
+     ShellProvider is the abstract class that provide shell operation for mimiq
+     
+     this abstraction is important to test purpose
+     */
+    private var shellProvider: ShellProvider {
+        #if DEBUG
+        return mode != nil ? mode!.shellProvider : DefaultShellProvider.shared
+        #else
+        return DefaultShellProvider.shared
+        #endif
+    }
+    
+    /**
+     The path user or defaultly set to place the generated GIF
+     */
     private var resultPath: String {
         guard let customPath = path else {
             return defaultResultPath
@@ -182,9 +260,17 @@ struct Mimiq: ParsableCommand {
         return customPath
     }
     
+    /**
+     The filename mimiq will use as GIF result filename
+     
+     the default filename will be mimiq.gif
+     if there's any previous mimiq result, then the filename will be have number suffix appending based on latest increment number
+     
+     for example: mimiq10.gif
+     */
     private var mimiqFileName: String {
         // Current list file on target path for GIF
-        guard let listFiles = Explorer.default.list(at: resultPath, withFolder: false, isRecursive: false).successValue else {
+        guard let listFiles = shellProvider.list(at: resultPath, withFolder: false, isRecursive: false).successValue else {
             return "mimiq"
         }
         
@@ -216,6 +302,11 @@ struct Mimiq: ParsableCommand {
         return "mimiq" + prefix
     }
     
+    /**
+     The simulator target mimiq will use to record
+     
+     for default, mimiq will use the first available simulator or if user determine spesific simulator
+     */
     private var mimiqTarget: Simulator? {
         let availableSimulator = shellProvider.availableSimulators
         
@@ -269,23 +360,9 @@ struct Mimiq: ParsableCommand {
         
         // MARK: - Check FFMpeg Installed
         
-        if !shellProvider.isFFMpegInstalled {
+        guard shellProvider.isFFMpegInstalled else {
             log("missing ffmpeg")
-            print("⚙️  Missing ffmpeg, installing...(This may take a while)")
-            
-            log("installing ffmpeg")
-            let command = "brew install ffmpeg"
-            let installFFMpegResult = shell(arguments: [command])
-            
-            guard installFFMpegResult.status == 0 else {
-                log("error install mmpeg")
-                logShellOutput(installFFMpegResult.output)
-                logShellOutput(shell(arguments: ["brew doctor"]).output)
-                print("💥 failed install ffmpeg"); return
-            }
-            
-            log("success install ffmpeg")
-            logShellOutput(installFFMpegResult.output)
+            print("💥 Missing FFMpeg, please install mpeg, by executing `brew install ffmpeg`"); return
         }
         
         // MARK: - Unwarp Mimiq Target
@@ -356,4 +433,24 @@ struct Mimiq: ParsableCommand {
     }
 }
 
-Mimiq.main()
+struct Main: ParsableCommand {
+    static var configuration = CommandConfiguration(
+        commandName: appName,
+        abstract:
+        """
+
+        Record your Xcode simulator and convert it to GIF
+        """,
+        discussion:
+        """
+        \(appName) \(version)
+        
+        Created by Wendy Liga
+        Learn more https://github.com/wendyliga/mimiq
+        """,
+        subcommands: [Record.self, List.self, Version.self, Cache.self],
+        defaultSubcommand: Record.self
+    )
+}
+
+Main.main()

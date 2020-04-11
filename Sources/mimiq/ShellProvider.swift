@@ -1,3 +1,4 @@
+import Explorer
 import Foundation
 import ConsoleIO
 
@@ -10,15 +11,69 @@ struct Simulator: Decodable {
     let name: String
 }
 
+// MARK: - Shell Command
+
+typealias ShellResult = (status: Int32, output: String?)
+
+@discardableResult
+func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> ShellResult {
+    let task = Process()
+    task.launchPath = launchPath
+    task.arguments = ["bash", "-c"] + arguments
+
+    let pipe = Pipe()
+    task.standardOutput = pipe
+    task.standardError = pipe
+    
+    task.launch()
+    task.waitUntilExit()
+    
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    let output = String(data: data, encoding: String.Encoding.utf8)
+    
+    return (status: task.terminationStatus, output: output)
+}
+
+func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String], message: String) -> ShellResult {
+    let task = Process()
+    task.launchPath = launchPath
+    task.arguments = ["bash", "-c"] + arguments
+
+    let pipe = Pipe()
+    task.standardOutput = pipe
+    task.standardError = pipe
+    
+    DispatchQueue.global(qos: .background).async {
+        task.launch()
+    }
+    
+    input(message, defaultValue: "", afterValidation: { _ in
+        task.interrupt()
+    })
+    
+    task.waitUntilExit()
+    
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    let output = String(data: data, encoding: String.Encoding.utf8)
+    
+    return (status: task.terminationStatus, output: output)
+}
+
+// MARK: - Shell Provider
+
+/**
+ Shell Operation Abstraction
+ */
 protocol ShellProvider {
     var isHomebrewInstalled: Bool { get }
     var isFFMpegInstalled: Bool { get }
     var availableSimulators: [Simulator] { get }
     func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool) -> ShellResult
     func convertMovToGif(movSource: String, gifTarget: String, printOutLog: Bool) -> ShellResult
+    func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error>
 }
 
-class DefaultShellProvider: ShellProvider {
+final class DefaultShellProvider: ShellProvider {
     static let shared = DefaultShellProvider()
     
     var isHomebrewInstalled: Bool {
@@ -101,56 +156,81 @@ class DefaultShellProvider: ShellProvider {
         
         return shell(arguments: [generateGIFCommand])
     }
+    
+    func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error> {
+        Explorer.default.list(at: path, withFolder: isFolderIncluded, isRecursive: isRecursive)
+    }
 }
 
-// MARK: - Shell Command
+// MARK: - Mock Shell Provider
 
-typealias ShellResult = (status: Int32, output: String?)
+#if DEBUG
+let dummySimulator: [Simulator] = [
+    Simulator(udid: UUID(uuidString: "00000000-0000-0000-0000-000000000000")!, name: "Mimiq Simulator"),
+    Simulator(udid: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!, name: "Mimiq Simulator #2")
+]
 
-@discardableResult
-func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> ShellResult {
-    let task = Process()
-    task.launchPath = launchPath
-    task.arguments = ["bash", "-c"] + arguments
-
-    let pipe = Pipe()
-    task.standardOutput = pipe
-    task.standardError = pipe
-    
-    task.launch()
-    task.waitUntilExit()
-    
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    let output = String(data: data, encoding: String.Encoding.utf8)
-    
-    return (status: task.terminationStatus, output: output)
-}
-
-func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String], message: String) -> ShellResult {
-    let task = Process()
-    task.launchPath = launchPath
-    task.arguments = ["bash", "-c"] + arguments
-
-    let pipe = Pipe()
-    task.standardOutput = pipe
-    task.standardError = pipe
-    
-    DispatchQueue.global(qos: .background).async {
-        task.launch()
+extension ShellProvider {
+    var isHomebrewInstalled: Bool {
+        true
     }
     
-    input(message, defaultValue: "", afterValidation: { _ in
-        task.interrupt()
-    })
+    var isFFMpegInstalled: Bool {
+        true
+    }
     
-    task.waitUntilExit()
+    var availableSimulators: [Simulator] {
+        dummySimulator
+    }
     
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    let output = String(data: data, encoding: String.Encoding.utf8)
+    func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool) -> ShellResult {
+        (0,nil)
+    }
     
-    return (status: task.terminationStatus, output: output)
+    func convertMovToGif(movSource: String, gifTarget: String, printOutLog: Bool) -> ShellResult {
+        (0,nil)
+    }
+    
+    func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error> {
+        .success([])
+    }
 }
 
-var isTesting: Bool {
-    CommandLine.arguments.contains("--testing")
+final class AvailableSimulatorShellProvider: ShellProvider {
+    var availableSimulators: [Simulator] {
+        dummySimulator
+    }
 }
+
+final class NoneSimulatorShellProvider: ShellProvider {
+    var availableSimulators: [Simulator] {
+        []
+    }
+}
+
+final class NoHomebrewShellProvider: ShellProvider {
+    var isHomebrewInstalled: Bool {
+        false
+    }
+}
+
+final class NoFFMpegShellProvider: ShellProvider {
+    var isFFMpegInstalled: Bool {
+        false
+    }
+}
+
+final class FailedRecordShellProvider: ShellProvider {
+    func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool) -> ShellResult {
+        (1,"Failed to create mov file")
+    }
+}
+
+final class FailedConvertingGIFShellProvider: ShellProvider {
+    func convertMovToGif(movSource: String, gifTarget: String, printOutLog: Bool) -> ShellResult {
+        (1,"Failed to convert MOV to GIF")
+    }
+}
+
+final class SuccessShellProvider: ShellProvider {}
+#endif
