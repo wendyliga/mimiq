@@ -16,8 +16,7 @@ jobs:
     - name: Build Binary
       run: make build
     - name: Zipping Binary
-      run: tar -zcvf .build/mimiq.tar.gz .build/release/mimiq
-      run: shasum -a 256 README.md 
+      run: tar -zcvf .build/mimiq.tar.gz .build/release/mimiq; shasum -a 256 .build/mimiq.tar.gz
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
