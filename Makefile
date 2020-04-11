@@ -16,10 +16,10 @@ install_debug: build_debug
 	install ".build/debug/mimiq" "$(bindir)"
 
 compress: build
-	tar -zcvf .build/mimiq.tar.gz .build/release/mimiq
+	tar -C .build/release -cvf .build/mimiq.tar.gz mimiq
 	shasum -a 256 .build/mimiq.tar.gz
 
-	zip -r .build/mimiq.zip .build/release/mimiq
+	zip -rj .build/mimiq.zip .build/release/mimiq
 	shasum -a 256 .build/mimiq.zip
 
 test:
