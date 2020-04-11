@@ -9,7 +9,9 @@ on:
 jobs:
   upload_binary:
     name: Upload Binary
-    runs-on: macos-latest
+    container: 
+      image: vapor/swift:5.2-bionic
+    runs-on: ubuntu-18.04
     steps:
     - name: Checkout
       uses: actions/checkout@v2
