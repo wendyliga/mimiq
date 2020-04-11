@@ -14,12 +14,15 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Build Binary
-      uses: make build
+      run: make build
+    - name: Zipping Binary
+      run: tar -zcvf .build/mimiq.tar.gz .build/release/mimiq
+      run: shasum -a 256 README.md 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: .build/release/mimiq
+        file: .build/mimiq.tar.gz
         asset_name: mimiq
         tag: ${{ github.ref }}
         overwrite: true
