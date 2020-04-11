@@ -15,6 +15,10 @@ install_debug: build_debug
 	mkdir -p "$(bindir)"
 	install ".build/debug/mimiq" "$(bindir)"
 
+compress: build
+	tar -zcvf .build/mimiq.tar.gz .build/release/mimiq; shasum -a 256 .build/mimiq.tar.gz
+	zip -r mimiq.zip .build/release/mimiq; shasum -a 256 .build/mimiq.zip
+
 test:
 	swift test
 
