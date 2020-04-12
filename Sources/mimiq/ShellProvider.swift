@@ -13,7 +13,7 @@ struct Simulator: Decodable {
 
 // MARK: - Shell Command
 
-typealias ShellResult = (status: Int32, output: String?)
+typealias ShellResult = (status: Int32, output: String?, errorOuput: String?)
 
 @discardableResult
 func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> ShellResult {
@@ -23,7 +23,9 @@ func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> ShellRes
 
     let pipe = Pipe()
     task.standardOutput = pipe
-    task.standardError = pipe
+    
+    let errorPipe = Pipe()
+    task.standardError = errorPipe
     
     task.launch()
     task.waitUntilExit()
@@ -31,7 +33,10 @@ func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> ShellRes
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
     let output = String(data: data, encoding: String.Encoding.utf8)
     
-    return (status: task.terminationStatus, output: output)
+    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+    let errorOuput = String(data: errorData, encoding: String.Encoding.utf8)
+    
+    return (status: task.terminationStatus, output: output, errorOuput: errorOuput)
 }
 
 func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String], message: String) -> ShellResult {
@@ -41,7 +46,9 @@ func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String],
 
     let pipe = Pipe()
     task.standardOutput = pipe
-    task.standardError = pipe
+    
+    let errorPipe = Pipe()
+    task.standardError = errorPipe
     
     DispatchQueue.global(qos: .background).async {
         task.launch()
@@ -56,7 +63,10 @@ func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String],
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
     let output = String(data: data, encoding: String.Encoding.utf8)
     
-    return (status: task.terminationStatus, output: output)
+    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+    let errorOuput = String(data: errorData, encoding: String.Encoding.utf8)
+    
+    return (status: task.terminationStatus, output: output, errorOuput: errorOuput)
 }
 
 // MARK: - Shell Provider
@@ -86,6 +96,10 @@ final class DefaultShellProvider: ShellProvider {
     
     var availableSimulators: [Simulator] {
         let simulatorRuntimeListShellExecution = shell(arguments: ["xcrun simctl list -v runtimes --json"])
+        
+        Log.default.write("fetching runtimes")
+        Log.default.write(simulatorRuntimeListShellExecution.output ?? "no ouput")
+        
         guard
             simulatorRuntimeListShellExecution.status == 0,
             let runtimeListRawData = simulatorRuntimeListShellExecution.output?.data(using: .utf8),
@@ -112,6 +126,10 @@ final class DefaultShellProvider: ShellProvider {
          */
 
         let simulatorListShellExecution = shell(arguments: ["xcrun simctl list -v devices booted --json"])
+        
+        Log.default.write("fetching booted devices")
+        Log.default.write(simulatorListShellExecution.output ?? "no ouput")
+        
         guard
             simulatorListShellExecution.status == 0,
             let simulatorListRawData = simulatorListShellExecution.output?.data(using: .utf8),

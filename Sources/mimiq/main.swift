@@ -329,8 +329,9 @@ struct Record: ParsableCommand {
         // MARK: - Check Not Linux
         
         #if os(Linux)
-            log("mimiq is running on linux", printOut: isVerbose)
-            fatalError("\(appName) is not support linux yet")
+        log("mimiq is running on linux", printOut: isVerbose)
+        print("\(appName) is not support linux yet")
+        Darwin.exit(EXIT_FAILURE)
         #endif
         
         log("mimiq is running on mac")
@@ -342,7 +343,9 @@ struct Record: ParsableCommand {
         
         guard configureEnvironment().successValue != nil else {
             log("failed setup environment")
-            fatalError("💥 Failed to Setup Enviroment")
+            
+            print("💥 Failed to Setup Enviroment")
+            Darwin.exit(EXIT_FAILURE)
         }
         
         log("environment setup success")
@@ -351,7 +354,9 @@ struct Record: ParsableCommand {
         
         guard shellProvider.isHomebrewInstalled else {
             log("missing homebrew")
-            fatalError("💥 Missing Homebrew, please install Homebrew, for more visit https://brew.sh")
+            
+            print("💥 Missing Homebrew, please install Homebrew, for more visit https://brew.sh")
+            Darwin.exit(EXIT_FAILURE)
         }
         
         log("Homebrew is installed")
@@ -361,14 +366,18 @@ struct Record: ParsableCommand {
         
         guard shellProvider.isFFMpegInstalled else {
             log("missing ffmpeg")
-            fatalError("💥 Missing FFMpeg, please install mpeg, by executing `brew install ffmpeg`")
+            
+            print("💥 Missing FFMpeg, please install mpeg, by executing `brew install ffmpeg`")
+            Darwin.exit(EXIT_FAILURE)
         }
         
         // MARK: - Unwarp Mimiq Target
         
         guard let mimiqTarget = mimiqTarget else {
             log("no available simulator")
-            fatalError("💥 No Available Simulator to mimiq")
+            
+            print("💥 No Available Simulator to mimiq")
+            Darwin.exit(EXIT_FAILURE)
         }
         
         log("simulator target \(mimiqTarget)")
@@ -379,7 +388,11 @@ struct Record: ParsableCommand {
         let movSource = tempFolder + UUID().uuidString + ".mov"
         
         log("simulator to record on \(movSource)")
-        logShellOutput(shell(arguments: ["xcodebuild -version"]).output) // log xcode version
+        
+        // log xcode version
+        let xcodeBuildVersion = shell(arguments: ["xcodebuild -version"])
+        logShellOutput(xcodeBuildVersion.output ?? "no ouput")
+        logShellOutput(xcodeBuildVersion.errorOuput ?? "no error ouput")
         
         let recordResult = shellProvider.recordSimulator(target: mimiqTarget, movTarget: movSource, printOutLog: isVerbose)
 
@@ -387,8 +400,11 @@ struct Record: ParsableCommand {
         guard recordResult.status == 0 else {
             removeCache()
             log("error record simulator")
-            logShellOutput(recordResult.output)
-            fatalError("💥 Record Failed, Please Try Again")
+            logShellOutput(recordResult.output ?? "no ouput")
+            logShellOutput(recordResult.errorOuput ?? "no error ouput")
+            
+            print("💥 Record Failed, Please Try Again")
+            Darwin.exit(EXIT_FAILURE)
         }
         
         log("stop recording")
@@ -405,9 +421,11 @@ struct Record: ParsableCommand {
             // clear generated cache
             removeCache()
             log("error generating GIF")
-            logShellOutput(generateGIFResult.output)
+            logShellOutput(generateGIFResult.output ?? "no ouput")
+            logShellOutput(generateGIFResult.errorOuput ?? "no error ouput")
             
-            fatalError("💥 Failed on Creating GIF, Please Try Again")
+            print("💥 Failed on Creating GIF, Please Try Again")
+            Darwin.exit(EXIT_FAILURE)
         }
         
         log("success generating GIF")
