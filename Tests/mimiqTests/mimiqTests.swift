@@ -103,10 +103,30 @@ final class mimiqTests: XCTestCase {
         
         XCTAssertEqual(try shellProcess(args: ["list", "--mode", "none"]), expected)
     }
+    
+    func test_listSimulatorJSON_exist() throws {
+        let expected = "[{\"name\":\"Mimiq Simulator\",\"udid\":\"00000000-0000-0000-0000-000000000000\"},{\"name\":\"Mimiq Simulator #2\",\"udid\":\"11111111-1111-1111-1111-111111111111\"}]\n"
+        
+        XCTAssertEqual(try shellProcess(args: ["list", "--mode", "available", "--json"]), expected)
+    }
+    
+    func test_listSimulatorJSON_notExist() throws {
+        let expected = "[]\n"
+        
+        XCTAssertEqual(try shellProcess(args: ["list", "--mode", "none", "--json"]), expected)
+    }
 
     static var allTests = [
-//        ("test_record", test_record),
+        ("test_record_noHomebrewInstalled", test_record_noHomebrewInstalled),
+        ("test_record_noFFMpegInstalled", test_record_noFFMpegInstalled),
+        ("test_record_noSimulator", test_record_noSimulator),
+        ("test_record_failRecord", test_record_failRecord),
+        ("test_record_failMakeGIF", test_record_failMakeGIF),
+        ("test_record_success", test_record_success),
         ("test_checkVersion", test_checkVersion),
         ("test_listSimulator_exist", test_listSimulator_exist),
+        ("test_listSimulator_notExist", test_listSimulator_notExist),
+        ("test_listSimulatorJSON_exist", test_listSimulatorJSON_exist),
+        ("test_listSimulatorJSON_notExist", test_listSimulatorJSON_notExist)
     ]
 }

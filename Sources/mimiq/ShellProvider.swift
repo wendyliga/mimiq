@@ -6,7 +6,7 @@ struct Runtime: Decodable {
     let identifier: String
 }
 
-struct Simulator: Decodable {
+struct Simulator: Codable {
     let udid: UUID
     let name: String
 }
@@ -97,9 +97,6 @@ final class DefaultShellProvider: ShellProvider {
     var availableSimulators: [Simulator] {
         let simulatorRuntimeListShellExecution = shell(arguments: ["xcrun simctl list -v runtimes --json"])
         
-        Log.default.write("fetching runtimes")
-        Log.default.write(simulatorRuntimeListShellExecution.output ?? "no ouput")
-        
         guard
             simulatorRuntimeListShellExecution.status == 0,
             let runtimeListRawData = simulatorRuntimeListShellExecution.output?.data(using: .utf8),
@@ -126,9 +123,6 @@ final class DefaultShellProvider: ShellProvider {
          */
 
         let simulatorListShellExecution = shell(arguments: ["xcrun simctl list -v devices booted --json"])
-        
-        Log.default.write("fetching booted devices")
-        Log.default.write(simulatorListShellExecution.output ?? "no ouput")
         
         guard
             simulatorListShellExecution.status == 0,
@@ -202,11 +196,11 @@ extension ShellProvider {
     }
     
     func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool) -> ShellResult {
-        (0,nil)
+        (0, nil, nil)
     }
     
     func convertMovToGif(movSource: String, gifTarget: String, printOutLog: Bool) -> ShellResult {
-        (0,nil)
+        (0, nil, nil)
     }
     
     func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error> {
@@ -240,13 +234,13 @@ final class NoFFMpegShellProvider: ShellProvider {
 
 final class FailedRecordShellProvider: ShellProvider {
     func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool) -> ShellResult {
-        (1,"Failed to create mov file")
+        (1, nil, "Failed to create mov file")
     }
 }
 
 final class FailedConvertingGIFShellProvider: ShellProvider {
     func convertMovToGif(movSource: String, gifTarget: String, printOutLog: Bool) -> ShellResult {
-        (1,"Failed to convert MOV to GIF")
+        (1, nil, "Failed to convert MOV to GIF")
     }
 }
 

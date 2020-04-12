@@ -104,6 +104,9 @@ struct List: ParsableCommand {
       discussion: ""
     )
     
+    @Flag(help: "Output available simulator to mimiq with JSON format")
+    var json: Bool
+    
     #if DEBUG
     enum Mode: String, ExpressibleByArgument {
         case available
@@ -132,13 +135,27 @@ struct List: ParsableCommand {
         
         let availableSimulators = shellProvider.availableSimulators
         guard availableSimulators.isNotEmpty else {
-            print("💥 No Available Simulator to mimiq"); return
+            print(json ? "[]" : "💥 No Available Simulator to mimiq"); return
         }
         
-        print("Available Simulator to mimiq: ")
-        availableSimulators.forEach { simulator in
-            print("✅ \(simulator.udid) \(simulator.name)")
+        var outputs = [String]()
+        
+        if json {
+            let jsonEncoder = JSONEncoder()
+            
+            do {
+                let jsonData = try jsonEncoder.encode(availableSimulators)
+                outputs.append(String(data: jsonData, encoding: .utf8) ?? "[]")
+            } catch {
+                Log.default.write(error.localizedDescription)
+                outputs.append("[]")
+            }
+        } else {
+            outputs.append("Available Simulator to mimiq: ")
+            outputs.append(contentsOf: availableSimulators.map { "✅ \($0.udid) \($0.name)" })
         }
+        
+        print(outputs.joined(separator: "\n"))
     }
 }
 
