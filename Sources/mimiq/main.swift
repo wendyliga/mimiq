@@ -329,9 +329,8 @@ struct Record: ParsableCommand {
         // MARK: - Check Not Linux
         
         #if os(Linux)
-            print("\(appName) is not support linux yet")
             log("mimiq is running on linux", printOut: isVerbose)
-            return
+            fatalError("\(appName) is not support linux yet")
         #endif
         
         log("mimiq is running on mac")
@@ -343,7 +342,7 @@ struct Record: ParsableCommand {
         
         guard configureEnvironment().successValue != nil else {
             log("failed setup environment")
-            print("💥 Failed to Setup Enviroment"); return
+            fatalError("💥 Failed to Setup Enviroment")
         }
         
         log("environment setup success")
@@ -352,7 +351,7 @@ struct Record: ParsableCommand {
         
         guard shellProvider.isHomebrewInstalled else {
             log("missing homebrew")
-            print("💥 Missing Homebrew, please install Homebrew, for more visit https://brew.sh"); return
+            fatalError("💥 Missing Homebrew, please install Homebrew, for more visit https://brew.sh")
         }
         
         log("Homebrew is installed")
@@ -362,14 +361,14 @@ struct Record: ParsableCommand {
         
         guard shellProvider.isFFMpegInstalled else {
             log("missing ffmpeg")
-            print("💥 Missing FFMpeg, please install mpeg, by executing `brew install ffmpeg`"); return
+            fatalError("💥 Missing FFMpeg, please install mpeg, by executing `brew install ffmpeg`")
         }
         
         // MARK: - Unwarp Mimiq Target
         
         guard let mimiqTarget = mimiqTarget else {
             log("no available simulator")
-            print("💥 No Available Simulator to mimiq"); return
+            fatalError("💥 No Available Simulator to mimiq")
         }
         
         log("simulator target \(mimiqTarget)")
@@ -389,7 +388,7 @@ struct Record: ParsableCommand {
             removeCache()
             log("error record simulator")
             logShellOutput(recordResult.output)
-            print("💥 Record Failed, Please Try Again"); return
+            fatalError("💥 Record Failed, Please Try Again")
         }
         
         log("stop recording")
@@ -408,7 +407,7 @@ struct Record: ParsableCommand {
             log("error generating GIF")
             logShellOutput(generateGIFResult.output)
             
-            print("💥 Failed on Creating GIF, Please Try Again"); return
+            fatalError("💥 Failed on Creating GIF, Please Try Again")
         }
         
         log("success generating GIF")
