@@ -5,9 +5,9 @@
         "package": "ConsoleIO",
         "repositoryURL": "https://github.com/wendyliga/ConsoleIO.git",
         "state": {
-          "branch": "improve_input",
-          "revision": "5849429bb2a5cb809d35a1f9e620ff1261b66501",
-          "version": null
+          "branch": null,
+          "revision": "3933eb8c8f4ce00d07c2a80896b6463bdf1d31d1",
+          "version": "1.0.3"
         }
       },
       {
