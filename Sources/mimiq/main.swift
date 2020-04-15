@@ -29,7 +29,7 @@ import Foundation
 // MARK: - Configuration
 
 private let appName = "mimiq"
-private let version = "0.3.6"
+private let version = "0.3.7"
 
 // Environment setup params
 private let defaultResultPath = "~/Desktop/"
@@ -104,6 +104,9 @@ struct List: ParsableCommand {
       discussion: ""
     )
     
+    @Flag(help: "Output available simulator to mimiq with JSON format")
+    var json: Bool
+    
     #if DEBUG
     enum Mode: String, ExpressibleByArgument {
         case available
@@ -132,13 +135,27 @@ struct List: ParsableCommand {
         
         let availableSimulators = shellProvider.availableSimulators
         guard availableSimulators.isNotEmpty else {
-            print("💥 No Available Simulator to mimiq"); return
+            print(json ? "[]" : "💥 No Available Simulator to mimiq"); return
         }
         
-        print("Available Simulator to mimiq: ")
-        availableSimulators.forEach { simulator in
-            print("✅ \(simulator.udid) \(simulator.name)")
+        var outputs = [String]()
+        
+        if json {
+            let jsonEncoder = JSONEncoder()
+            
+            do {
+                let jsonData = try jsonEncoder.encode(availableSimulators)
+                outputs.append(String(data: jsonData, encoding: .utf8) ?? "[]")
+            } catch {
+                Log.default.write(error.localizedDescription)
+                outputs.append("[]")
+            }
+        } else {
+            outputs.append("Available Simulator to mimiq: ")
+            outputs.append(contentsOf: availableSimulators.map { "✅ \($0.udid) \($0.name)" })
         }
+        
+        print(outputs.joined(separator: "\n"))
     }
 }
 
@@ -201,6 +218,9 @@ struct Record: ParsableCommand {
     
     @Option(help: "Select Spesific simulator based on its UDID, run `\(appName) list` to check available simulator")
     var udid: String?
+    
+    @Option(name: .customLong("custom-ffmpeg"), default: nil, parsing: SingleValueParsingStrategy.scanningForValue, help: "Use Custom FFMpeg, provide it with the path to FFMpeg Binary Directory, Please Refer the Directory and not the Binary.")
+    var customFFMpegPath: String?
     
     @Flag(name: .short, help: "Execute mimiq with verbose log")
     var isVerbose: Bool
@@ -329,9 +349,9 @@ struct Record: ParsableCommand {
         // MARK: - Check Not Linux
         
         #if os(Linux)
-            print("\(appName) is not support linux yet")
-            log("mimiq is running on linux", printOut: isVerbose)
-            return
+        log("mimiq is running on linux", printOut: isVerbose)
+        print("\(appName) is not support linux yet")
+        Darwin.exit(EXIT_FAILURE)
         #endif
         
         log("mimiq is running on mac")
@@ -343,33 +363,48 @@ struct Record: ParsableCommand {
         
         guard configureEnvironment().successValue != nil else {
             log("failed setup environment")
-            print("💥 Failed to Setup Enviroment"); return
+            
+            print("💥 Failed to Setup Enviroment")
+            Darwin.exit(EXIT_FAILURE)
         }
         
         log("environment setup success")
         
         // MARK: - Check Homebrew Installed
         
-        guard shellProvider.isHomebrewInstalled else {
-            log("missing homebrew")
-            print("💥 Missing Homebrew, please install Homebrew, for more visit https://brew.sh"); return
+        // only on default ffmpeg
+        if customFFMpegPath == nil {
+            guard shellProvider.isHomebrewInstalled else {
+                log("missing homebrew")
+                
+                print("💥 Missing Homebrew, please install Homebrew, for more visit https://brew.sh")
+                Darwin.exit(EXIT_FAILURE)
+            }
+            
+            log("Homebrew is installed")
+            logShellOutput(shell(arguments: ["brew --version"]).output)
         }
         
-        log("Homebrew is installed")
-        logShellOutput(shell(arguments: ["brew --version"]).output)
         
         // MARK: - Check FFMpeg Installed
         
-        guard shellProvider.isFFMpegInstalled else {
-            log("missing ffmpeg")
-            print("💥 Missing FFMpeg, please install mpeg, by executing `brew install ffmpeg`"); return
+        // only on default ffmpeg
+        if customFFMpegPath == nil {
+            guard shellProvider.isFFMpegInstalled else {
+                log("missing ffmpeg")
+                
+                print("💥 Missing FFMpeg, please install mpeg, by executing `brew install ffmpeg`")
+                Darwin.exit(EXIT_FAILURE)
+            }
         }
         
         // MARK: - Unwarp Mimiq Target
         
         guard let mimiqTarget = mimiqTarget else {
             log("no available simulator")
-            print("💥 No Available Simulator to mimiq"); return
+            
+            print("💥 No Available Simulator to mimiq")
+            Darwin.exit(EXIT_FAILURE)
         }
         
         log("simulator target \(mimiqTarget)")
@@ -380,35 +415,56 @@ struct Record: ParsableCommand {
         let movSource = tempFolder + UUID().uuidString + ".mov"
         
         log("simulator to record on \(movSource)")
-        logShellOutput(shell(arguments: ["xcodebuild -version"]).output) // log xcode version
         
-        let recordResult = shellProvider.recordSimulator(target: mimiqTarget, movTarget: movSource, printOutLog: isVerbose)
-
-        log("record simulator finish with status \(recordResult.status)")
-        guard recordResult.status == 0 else {
-            removeCache()
-            log("error record simulator")
-            logShellOutput(recordResult.output)
-            print("💥 Record Failed, Please Try Again"); return
-        }
+        // log xcode version
+        let xcodeBuildVersion = shell(arguments: ["xcodebuild -version"])
+        logShellOutput(xcodeBuildVersion.output ?? "no ouput")
+        logShellOutput(xcodeBuildVersion.errorOuput ?? "no error ouput")
         
-        log("stop recording")
+        // dispatch group for hold execution and waiting for async task of record simulator
+        let group = DispatchGroup()
+        group.enter()
+        
+        // start record simulator
+        shellProvider.recordSimulator(target: mimiqTarget, movTarget: movSource, printOutLog: isVerbose, completion: { recordResult in
+            self.log("record simulator finish with status \(recordResult.status)")
+            
+            guard recordResult.status == 0 else {
+                removeCache()
+                self.log("error record simulator")
+                self.logShellOutput(recordResult.output ?? "no ouput")
+                self.logShellOutput(recordResult.errorOuput ?? "no error ouput")
+                
+                print("💥 Record Failed, Please Try Again")
+                Darwin.exit(EXIT_FAILURE)
+            }
+            
+            self.log("stop recording")
+            
+            /// inform DispatchGroup to continue
+            group.leave()
+        })
+        
+        /// wait until async `recordSimulator` finish
+        group.wait()
         
         // MARK: - Convert Mov to Gif
         
         log("start creating GIF")
-        print("⚙️  Creating GIF..")
+        print("⚙️  Creating GIF...")
         
         let gifTargetPath = resultPath + mimiqFileName + ".gif"
-        let generateGIFResult = shellProvider.convertMovToGif(movSource: movSource, gifTarget: gifTargetPath, printOutLog: isVerbose)
+        let generateGIFResult = shellProvider.convertMovToGif(movSource: movSource, gifTarget: gifTargetPath, customFFMpegPath: customFFMpegPath, printOutLog: isVerbose)
         
         guard generateGIFResult.status == 0 else {
             // clear generated cache
             removeCache()
             log("error generating GIF")
-            logShellOutput(generateGIFResult.output)
+            logShellOutput(generateGIFResult.output ?? "no ouput")
+            logShellOutput(generateGIFResult.errorOuput ?? "no error ouput")
             
-            print("💥 Failed on Creating GIF, Please Try Again"); return
+            print("💥 Failed on Creating GIF, Please Try Again")
+            Darwin.exit(EXIT_FAILURE)
         }
         
         log("success generating GIF")
