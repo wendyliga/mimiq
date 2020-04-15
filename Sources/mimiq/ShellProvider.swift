@@ -39,7 +39,7 @@ func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> ShellRes
     return (status: task.terminationStatus, output: output, errorOuput: errorOuput)
 }
 
-func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String], message: String) -> ShellResult {
+func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String], message: String, completion: @escaping (ShellResult) -> Void) {
     let task = Process()
     task.launchPath = launchPath
     task.arguments = ["bash", "-c"] + arguments
@@ -55,18 +55,20 @@ func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String],
     }
     
     input(message, defaultValue: "", afterValidation: { _ in
+        print("⚙️  Stopping...")
+        Log.default.write("stopping simulator recording process")
         task.interrupt()
     })
     
-    task.waitUntilExit()
-    
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    let output = String(data: data, encoding: String.Encoding.utf8)
-    
-    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-    let errorOuput = String(data: errorData, encoding: String.Encoding.utf8)
-    
-    return (status: task.terminationStatus, output: output, errorOuput: errorOuput)
+    task.terminationHandler = { process in
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: data, encoding: String.Encoding.utf8)
+        
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        let errorOuput = String(data: errorData, encoding: String.Encoding.utf8)
+        
+        completion((status: task.terminationStatus, output: output, errorOuput: errorOuput))
+    }
 }
 
 // MARK: - Shell Provider
@@ -78,8 +80,8 @@ protocol ShellProvider {
     var isHomebrewInstalled: Bool { get }
     var isFFMpegInstalled: Bool { get }
     var availableSimulators: [Simulator] { get }
-    func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool) -> ShellResult
-    func convertMovToGif(movSource: String, gifTarget: String, printOutLog: Bool) -> ShellResult
+    func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool, completion: @escaping (ShellResult) -> Void)
+    func convertMovToGif(movSource: String, gifTarget: String, customFFMpegPath: String?, printOutLog: Bool) -> ShellResult
     func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error>
 }
 
@@ -146,17 +148,19 @@ final class DefaultShellProvider: ShellProvider {
         }.flatMap { $0 }
     }
     
-    func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool) -> ShellResult {
+    func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool, completion: @escaping (ShellResult) -> Void) {
         let recordCommand = "xcrun simctl io \(target.udid.uuidString) recordVideo -f \(movTarget)"
         let recordMessage = "🔨 Recording Simulator \(target.name) with UDID \(target.udid)... Press Enter to Stop.)"
         
         Log.default.write(#"start recording with command "\#(recordCommand)""#, printOut: printOutLog)
         
-        return mustInteruptShell(arguments: [recordCommand], message: recordMessage)
+        mustInteruptShell(arguments: [recordCommand], message: recordMessage, completion: completion)
     }
     
-    func convertMovToGif(movSource: String, gifTarget: String, printOutLog: Bool) -> ShellResult {
+    func convertMovToGif(movSource: String, gifTarget: String, customFFMpegPath: String?, printOutLog: Bool) -> ShellResult {
         Log.default.write("GIF will be created on \(gifTarget)", printOut: printOutLog)
+        
+        var command = [String]()
         
         let setPallete = #"palette="/tmp/palette.png""#
         let configureFilter = #"filters="fps=15,scale=320:-1:flags=lanczos""#
@@ -164,9 +168,15 @@ final class DefaultShellProvider: ShellProvider {
         let createGIF = #"ffmpeg -nostdin -i \#(movSource) -i $palette -lavfi "$filters,paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -y \#(gifTarget)"#
         let generateGIFCommand = [setPallete, configureFilter , slicingVideo, createGIF].joined(separator: ";")
         
-        Log.default.write(#"executing ffmpeg with command "\#(generateGIFCommand)""#, printOut: printOutLog)
+        if let customFFMpegpath = customFFMpegPath {
+            // register path where custom ffmpeg is located
+            command.append("export PATH=$PATH:\(customFFMpegpath)")
+        }
         
-        return shell(arguments: [generateGIFCommand])
+        command.append(generateGIFCommand)
+        
+        Log.default.write(#"executing ffmpeg with command "\#(command)""#, printOut: printOutLog)
+        return shell(arguments: [command.joined(separator: ";")])
     }
     
     func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error> {
