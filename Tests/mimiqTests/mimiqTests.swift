@@ -63,7 +63,7 @@ final class mimiqTests: XCTestCase {
     
     func test_record_failMakeGIF() throws {
         let expected = [
-            "⚙️  Creating GIF..",
+            "⚙️  Creating GIF...",
             "💥 Failed on Creating GIF, Please Try Again",
             ""]
             .joined(separator: "\n")
@@ -73,7 +73,7 @@ final class mimiqTests: XCTestCase {
     
     func test_record_success() throws {
         let expected = [
-            "⚙️  Creating GIF..",
+            "⚙️  Creating GIF...",
             "✅ Grab your GIF at ~/Desktop/mimiq.gif",
             ""]
             .joined(separator: "\n")
@@ -82,7 +82,7 @@ final class mimiqTests: XCTestCase {
     }
     
     func test_checkVersion() throws {
-        let expected = "current version 0.3.6\n"
+        let expected = "current version 0.3.7\n"
         
         XCTAssertEqual(try shellProcess(args: ["version"]), expected)
     }
