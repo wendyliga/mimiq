@@ -6,6 +6,15 @@
     <a href="https://github.com/wendyliga/mimiq/actions">
         <img src="https://github.com/wendyliga/mimiq/workflows/Mimiq%20CI/badge.svg?branch=master" alt="Build Status" />
     </a>
+    <a href="https://sonarcloud.io/dashboard?id=wendyliga_mimiq">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=wendyliga_mimiq&metric=alert_status" alt="Sonar Cloud" />
+    </a>
+    <a href="https://sonarcloud.io/dashboard?id=wendyliga_mimiq">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=wendyliga_mimiq&metric=security_rating" alt="Security Rating" />
+    </a>
+    <a href="https://sonarcloud.io/dashboard?id=wendyliga_mimiq">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=wendyliga_mimiq&metric=sqale_rating" alt="Maintanibility Rating" />
+    </a>
     <a href="#">
         <img src="https://img.shields.io/badge/Made%20with-Swift-orange" />
     </a>
@@ -16,6 +25,7 @@
         <img src="https://img.shields.io/badge/contact-@wendyliga-blue.svg?style=flat" alt="Twitter: @wendyliga" />
     </a>
 </p>
+
 
 
 mimiq is simple executable to record your Xcode simulator and convert it to GIF.
