@@ -7,13 +7,14 @@ let package = Package(
     name: "mimiq",
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", .upToNextMinor(from: "0.0.1")),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
         .package(url: "https://github.com/wendyliga/ConsoleIO.git", .upToNextMajor(from: "1.0.0")),
         .package(url: "https://github.com/wendyliga/Explorer.git", from: "0.0.3"),
     ],
     targets: [
         .target(
             name: "mimiq",
-            dependencies: ["ArgumentParser", "Explorer", "ConsoleIO"]
+            dependencies: ["ArgumentParser", "Explorer", "ConsoleIO", "Logging"]
         ),
         .testTarget(
             name: "mimiqTests",
