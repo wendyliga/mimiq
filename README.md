@@ -108,11 +108,8 @@ to stop, just press `enter`. then grab your generated gif
 *raft approx 1Mb gif size for 15s
 ```
 
-# Improvement
-- [x] add option to set the result path
-- [x] set default path to desktop
-- [ ] add option to set GIF quality
-- [x] add option to select spesific simulator to record
+# Upcomming Features
+You can check upcomming feature on https://github.com/wendyliga/mimiq/projects/1
 
 **New version** is available with this improvement, update your `mimiq` by
 
