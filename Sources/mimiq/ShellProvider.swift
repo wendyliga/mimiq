@@ -76,12 +76,24 @@ func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String],
     
     DispatchQueue.global(qos: .background).async {
         task.launch()
+        
+        if !task.isRunning {
+            print("❌ Task failed to run")
+            Log.default.write("task failed to run")
+        }
     }
     
     input(message, defaultValue: "", afterValidation: { _ in
         print("⚙️  Stopping...")
         Log.default.write("stopping simulator recording process")
-        task.interrupt()
+        
+        if task.isRunning {
+           task.interrupt()
+           Log.default.write("interrupting task...")
+        } else {
+            print("❌ No Task run")
+            Log.default.write("task not running")
+        }
     })
     
     task.terminationHandler = { process in
@@ -91,6 +103,7 @@ func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String],
         let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
         let errorOuput = String(data: errorData, encoding: String.Encoding.utf8)
         
+        Log.default.write("handle completion status \(task.terminationStatus)")
         completion((status: task.terminationStatus, output: output, errorOuput: errorOuput))
     }
 }
