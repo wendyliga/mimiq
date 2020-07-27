@@ -213,6 +213,11 @@ struct Record: ParsableCommand {
     )
     #endif
     
+    enum Quality: String {
+        case low
+        case best
+    }
+    
     @Option(help: "Destination path you want to place \(appName) generated GIF")
     var path: String?
     
