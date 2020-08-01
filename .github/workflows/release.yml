@@ -50,13 +50,17 @@ jobs:
         sed "5s|.*|    sha256 \"$mimiq_shasum\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
         mv Formula/mimiq_temp.rb Formula/mimiq.rb
     - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v2
+      uses: peter-evans/create-pull-request@v3
       with:
           token: ${{ secrets.BOT_ACCESS_TOKEN }}
-          commiter: Wendy's Github Bot <github-bot@wendyliga.com>
+          committer: Wendy's Github Bot <github-bot@wendyliga.com>
+          author: Wendy's Github Bot <github-bot@wendyliga.com>
           commit-message: 'update mimiq formula'
-          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           title: 'Update mimiq formula'
           branch: mimiq
           branch-suffix: timestamp
+          reviewers: wendyliga
           body: Automated changes created on [mimiq release](https://github.com/wendyliga/mimiq/releases)
+    - name: Check outputs
+      run: |
+        echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
