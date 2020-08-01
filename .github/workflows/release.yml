@@ -49,11 +49,14 @@ jobs:
         mv Formula/mimiq_temp.rb Formula/mimiq.rb
         sed "5s|.*|    sha256 \"$mimiq_shasum\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
         mv Formula/mimiq_temp.rb Formula/mimiq.rb
-    - name: Commit Changes
-      uses: EndBug/add-and-commit@v4
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v2
       with:
-          author_name: Wendy's Github Bot
-          author_email: github-bot@wendyliga.com
-          message: 'update mimiq formula'
-      env:
-        GITHUB_TOKEN: ${{ secrets.BOT_ACCESS_TOKEN }}
+          token: ${{ secrets.BOT_ACCESS_TOKEN }}
+          commiter: Wendy's Github Bot <github-bot@wendyliga.com>
+          commit-message: 'update mimiq formula'
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          title: 'Update mimiq formula'
+          branch: mimiq
+          branch-suffix: timestamp
+          body: Automated changes created on [mimiq release](https://github.com/wendyliga/mimiq/releases)
