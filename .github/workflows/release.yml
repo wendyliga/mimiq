@@ -17,7 +17,9 @@ jobs:
       run: |
         make compress
         mimiq_shasum=$(shasum -a 256 -t .build/mimiq.tar.gz | awk '{ print $1 }')
+        echo shasum${mimiq_shasum}
         mimiq_version=$(awk '/version/{print $NF}' Sources/mimiq/Version.swift | sed -e 's/^"//' -e 's/"$//')
+        echo version${mimiq_version}
     - name: Upload Tar binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
