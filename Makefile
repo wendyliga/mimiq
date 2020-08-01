@@ -33,4 +33,4 @@ clean:
 	# clear all cache and logging
 	rm -rf ~/.mimiq
 
-.PHONY: build build_debug install install_debug uninstall version clean
+.PHONY: build build_debug install install_debug uninstall clean
