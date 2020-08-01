@@ -41,8 +41,8 @@ jobs:
         run: make build
       - name: Get mimiq Version and Checksum
         run: |
-          $mimiq_shasum=$(shasum -a 256 -t .build/release/mimiq | awk '{ print $1 }')
-          $mimiq_version=$(awk '/version/{print $NF}' ../Sources/mimiq/Version.swift | sed -e 's/^"//' -e 's/"$//')
+          mimiq_shasum=$(shasum -a 256 -t .build/release/mimiq | awk '{ print $1 }')
+          mimiq_version=$(awk '/version/{print $NF}' ../Sources/mimiq/Version.swift | sed -e 's/^"//' -e 's/"$//')
       - name: Checkout to Homebrew core Repository
         uses: actions/checkout@v2
         with:
@@ -51,7 +51,7 @@ jobs:
             ref: refs/heads/master
       - name: Update mimiq Formula
         run: |
-          $mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.tar.gz"
+          mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.tar.gz"
           sed "4s|.*|    url \"$mimiq_binary_url\"|" mimiq.rb > mimiq_temp.rb
           sed "5s|.*|    sha256 \"$mimiq_shasum\"|" mimiq.rb > mimiq_temp.rb
           mv mimiq_temp.rb mimiq.rb
