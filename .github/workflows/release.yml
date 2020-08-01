@@ -50,7 +50,7 @@ jobs:
           ref: refs/heads/master
     - name: Update mimiq Formula
       run: |
-        mimiq_shasum=${awk '{ print $1 }' ~/mimiq_shasum}
+        mimiq_shasum=`awk '{ print $1 }' ~/mimiq_shasum`
         mimiq_version=${awk '{ print $1 }' ~/mimiq_version}
         mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.tar.gz"
         sed "4s|.*|    url \"$mimiq_binary_url\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
