@@ -1,5 +1,5 @@
 
-name: Mimiq CI
+name: Unit Test
 
 on:
   push:
