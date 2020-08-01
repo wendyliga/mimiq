@@ -46,6 +46,7 @@ jobs:
         mimiq_version=`awk '{ print $1 }' ~/mimiq_version`
         mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.tar.gz"
         sed "4s|.*|    url \"$mimiq_binary_url\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
+        mv Formula/mimiq_temp.rb Formula/mimiq.rb
         sed "5s|.*|    sha256 \"$mimiq_shasum\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
         mv Formula/mimiq_temp.rb Formula/mimiq.rb
     - name: Commit Changes
