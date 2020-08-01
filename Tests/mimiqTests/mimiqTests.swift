@@ -111,6 +111,18 @@ final class mimiqTests: XCTestCase {
         XCTAssertEqual(try shellProcess(args: ["version"]), expected)
     }
     
+    func test_listQuality() throws {
+        let expected = """
+        Available Quality
+        - low
+        - medium
+        - high
+
+        """
+        
+        XCTAssertEqual(try shellProcess(args: ["quality"]), expected)
+    }
+    
     func test_listSimulator_exist() throws {
         let expected = [
             "Available Simulator to mimiq: ",

@@ -178,7 +178,8 @@ struct Record: ParsableCommand {
         \(Mode.allCases
             .map { "- " + $0.rawValue }
             .joined(separator: "\n"))
-        """
+        """,
+        subcommands: [Quality.self]
     )
     #else
     static var configuration = CommandConfiguration(
@@ -502,7 +503,12 @@ struct Main: ParsableCommand {
         Created by Wendy Liga
         Learn more https://github.com/wendyliga/mimiq
         """,
-        subcommands: [Record.self, List.self, Version.self, Cache.self],
+        subcommands: [
+            Record.self,
+            List.self,
+            Version.self,
+            Cache.self
+        ],
         defaultSubcommand: Record.self
     )
 }

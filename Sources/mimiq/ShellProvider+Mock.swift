@@ -47,21 +47,35 @@ extension ShellProvider {
         dummySimulator
     }
     
-    func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool, completion: @escaping (ShellResult) -> Void) {
+    func recordSimulator(
+        target: Simulator,
+        movTarget: String,
+        printOutLog: Bool,
+        completion: @escaping (ShellResult) -> Void
+    ) {
         completion((0, nil, nil))
     }
     
-    func convertMovToGif(movSource: String, gifTarget: String, quality: GIFQuality, customFFMpegPath: String?, printOutLog: Bool) -> ShellResult {
+    func convertMovToGif(
+        movSource: String,
+        gifTarget: String,
+        quality: GIFQuality,
+        customFFMpegPath: String?,
+        printOutLog: Bool
+    ) -> ShellResult {
         (0, nil, nil)
     }
     
-    func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error> {
+    func list(
+        at path: String,
+        withFolder isFolderIncluded: Bool,
+        isRecursive: Bool
+    ) -> Result<[Explorable], Error> {
         .success([])
     }
 }
 
 final class AvailableSimulatorShellProvider: ShellProvider {
-    
     var availableSimulators: [Simulator] {
         dummySimulator
     }
@@ -86,13 +100,24 @@ final class NoFFMpegShellProvider: ShellProvider {
 }
 
 final class FailedRecordShellProvider: ShellProvider {
-    func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool, completion: @escaping (ShellResult) -> Void) {
+    func recordSimulator(
+        target: Simulator,
+        movTarget: String,
+        printOutLog: Bool,
+        completion: @escaping (ShellResult) -> Void
+    ) {
         completion((1, nil, "Failed to create mov file"))
     }
 }
 
 final class FailedConvertingGIFShellProvider: ShellProvider {
-    func convertMovToGif(movSource: String, gifTarget: String, customFFMpegPath: String?, printOutLog: Bool) -> ShellResult {
+    func convertMovToGif(
+        movSource: String,
+        gifTarget: String,
+        quality: GIFQuality,
+        customFFMpegPath: String?,
+        printOutLog: Bool
+    ) -> ShellResult {
         (1, nil, "Failed to convert MOV to GIF")
     }
 }
