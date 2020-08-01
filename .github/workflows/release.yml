@@ -7,19 +7,14 @@ on:
       - '*'
 
 jobs:
-  upload_binary_update_formula:
-    name: Upload Binary & Update Homebrew Formula
+  upload_binary:
+    name: Upload Binary
     runs-on: macos-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Compress Binary
-      run: |
-        make compress
-        mimiq_shasum=$(shasum -a 256 -t .build/mimiq.tar.gz | awk '{ print $1 }')
-        echo shasum${mimiq_shasum}
-        mimiq_version=$(awk '/version/{print $NF}' Sources/mimiq/Version.swift | sed -e 's/^"//' -e 's/"$//')
-        echo version${mimiq_version}
+      run: make compress
     - name: Upload Tar binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
@@ -36,6 +31,17 @@ jobs:
         asset_name: mimiq.zip
         tag: ${{ github.ref }}
         overwrite: true
+  update_homebrew_formula:
+    name: Update Homebrew Formula
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Get Info
+      run: |
+        make compress
+        shasum -a 256 -t .build/mimiq.tar.gz | awk '{ print $1 }' > ~/mimiq_shasum
+        awk '/version/{print $NF}' Sources/mimiq/Version.swift | sed -e 's/^"//' -e 's/"$//' > ~/mimiq_version
     - name: Checkout to Homebrew core Repository
       uses: actions/checkout@v2
       with:
@@ -44,7 +50,8 @@ jobs:
           ref: refs/heads/master
     - name: Update mimiq Formula
       run: |
-        echo shasum${mimiq_shasum}
+        mimiq_shasum=${awk '{ print $1 }' ~/mimiq_shasum}
+        mimiq_version=${awk '{ print $1 }' ~/mimiq_version}
         mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.tar.gz"
         sed "4s|.*|    url \"$mimiq_binary_url\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
         sed "5s|.*|    sha256 \"$mimiq_shasum\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
