@@ -42,6 +42,7 @@ jobs:
           ref: refs/heads/master
     - name: Update mimiq Formula
       run: |
+        echo shasum${mimiq_shasum}
         mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.tar.gz"
         sed "4s|.*|    url \"$mimiq_binary_url\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
         sed "5s|.*|    sha256 \"$mimiq_shasum\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
