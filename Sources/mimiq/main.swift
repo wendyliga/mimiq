@@ -29,7 +29,6 @@ import Foundation
 // MARK: - Configuration
 
 let appName = "mimiq"
-let version = "0.3.8"
 
 // Environment setup params
 let defaultResultPath = "~/Desktop/"
