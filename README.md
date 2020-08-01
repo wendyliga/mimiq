@@ -69,6 +69,20 @@ mimiq
 Just simple to call `mimiq`, it will automatically detect current running simulator and record it for you
 
 ### Additional Options
+#### 🆕 Support Custom GIF Quality
+you can specify what quality of GIF, mimiq will generate.
+
+available quality
+```
+- low
+- medium
+- high
+```
+how to use
+```shell
+mimiq --quality high
+```
+
 #### Set custom GIF Path
 you can set where `mimiq` will place the generated gif. for default, `mimiq` will generate gif on desktop, but if you want to change it then, when start `mimiq` add this additional params
 
