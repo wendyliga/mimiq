@@ -28,53 +28,15 @@ import Foundation
 
 // MARK: - Configuration
 
-private let appName = "mimiq"
-private let version = "0.3.8"
+let appName = "mimiq"
+let version = "0.3.8"
 
 // Environment setup params
-private let defaultResultPath = "~/Desktop/"
-private let documentPath = "~/"
-private let mimiqFolder = documentPath + ".mimiq/"
-private let logFolder = mimiqFolder + "log/"
-private let tempFolder = mimiqFolder + "temp/"
-
-// MARK: - Logging
-
-class Log {
-    static let `default` = Log()
-    
-    private let dateFormatter = DateFormatter()
-    private let logFileName: String
-    private let logFileExtension = "log"
-    private var logs: [String] = []
-    
-    init() {
-        // Log file name
-        dateFormatter.dateFormat = "yyyyMMddHHmmss"
-        logFileName = dateFormatter.string(from: Date())
-    }
-    
-    @discardableResult
-    func write(_ message: String, printOut: Bool = false) -> Result<Bool, Error> {
-        if printOut {
-            print(message)
-        }
-        
-        dateFormatter.dateFormat = "HH:mm:ss"
-        let newLog = "[\(dateFormatter.string(from: Date()))] \(message)"
-        logs.append(newLog)
-        
-        let file = File(name: logFileName, content: logs.joined(separator: "\n"), extension: logFileExtension)
-        let operation = SingleFileOperation(file: file, path: logFolder)
-        
-        let writeOperationResult = Explorer.default.write(operation: operation, writingStrategy: .overwrite)
-        guard writeOperationResult.successValue != nil else {
-            return .failure(writeOperationResult.failureValue!)
-        }
-        
-        return .success(true)
-    }
-}
+let defaultResultPath = "~/Desktop/"
+let documentPath = "~/"
+let mimiqFolder = documentPath + ".mimiq/"
+let logFolder = mimiqFolder + "log/"
+let tempFolder = mimiqFolder + "temp/"
 
 // MARK: - Setup Environment
 
@@ -174,12 +136,28 @@ struct Version: ParsableCommand {
 struct Cache: ParsableCommand {
     static var configuration = CommandConfiguration(
       commandName: "clear-cache",
-      abstract: "clear all mimiq process cache",
+      abstract: "Clear all mimiq process cache",
       discussion: ""
     )
     
     func run() throws {
         removeCache()
+    }
+}
+
+struct Quality: ParsableCommand {
+    static var configuration = CommandConfiguration(
+      commandName: "quality",
+      abstract: "List available quality",
+      discussion: ""
+    )
+    
+    func run() throws {
+        print("Available Quality")
+        
+        GIFQuality.allCases.forEach { quality in
+            print("- \(quality)")
+        }
     }
 }
 
@@ -209,14 +187,10 @@ struct Record: ParsableCommand {
         """
         Record your Xcode simulator and convert it to GIF
         
-        """
+        """,
+        subcommands: [Quality.self]
     )
     #endif
-    
-    enum Quality: String {
-        case low
-        case best
-    }
     
     @Option(help: "Destination path you want to place \(appName) generated GIF")
     var path: String?
@@ -224,8 +198,21 @@ struct Record: ParsableCommand {
     @Option(help: "Select Spesific simulator based on its UDID, run `\(appName) list` to check available simulator")
     var udid: String?
     
-    @Option(name: .customLong("custom-ffmpeg"), default: nil, parsing: SingleValueParsingStrategy.scanningForValue, help: "Use Custom FFMpeg, provide it with the path to FFMpeg Binary Directory, Please Refer the Directory and not the Binary.")
+    @Option(
+        name: .customLong("custom-ffmpeg"),
+        default: nil,
+        parsing: .scanningForValue,
+        help: "Use Custom FFMpeg, provide it with the path to FFMpeg Binary Directory, Please Refer the Directory and not the Binary."
+    )
     var customFFMpegPath: String?
+    
+    @Option(
+        name: .shortAndLong,
+        default: .medium,
+        parsing: .scanningForValue,
+        help: "Determine what quality mimiq will output on generated product, default will be medium"
+    )
+    var quality: GIFQuality
     
     @Flag(name: .short, help: "Execute mimiq with verbose log")
     var isVerbose: Bool
@@ -459,7 +446,13 @@ struct Record: ParsableCommand {
         print("⚙️  Creating GIF...")
         
         let gifTargetPath = resultPath + mimiqFileName + ".gif"
-        let generateGIFResult = shellProvider.convertMovToGif(movSource: movSource, gifTarget: gifTargetPath, customFFMpegPath: customFFMpegPath, printOutLog: isVerbose)
+        let generateGIFResult = shellProvider.convertMovToGif(
+            movSource: movSource,
+            gifTarget: gifTargetPath,
+            quality: quality,
+            customFFMpegPath: customFFMpegPath,
+            printOutLog: isVerbose
+        )
         
         guard generateGIFResult.status == 0 else {
             // clear generated cache
