@@ -16,7 +16,7 @@ jobs:
     - name: Compress Binary
       run: |
         make compress
-        shasum -a 256 -t .build/mimiq.tar.gz | awk '{ print $1 }' > ~/mimiq_shasum
+        shasum -a 256 -t .build/mimiq.zip | awk '{ print $1 }' > ~/mimiq_shasum
         awk '/version/{print $NF}' Sources/mimiq/Version.swift | sed -e 's/^"//' -e 's/"$//' > ~/mimiq_version
     - name: Upload Tar binaries to release
       uses: svenstaro/upload-release-action@v1-release
@@ -44,7 +44,7 @@ jobs:
       run: |
         mimiq_shasum=`awk '{ print $1 }' ~/mimiq_shasum`
         mimiq_version=`awk '{ print $1 }' ~/mimiq_version`
-        mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.tar.gz"
+        mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.zip"
         sed "4s|.*|    url \"$mimiq_binary_url\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
         mv Formula/mimiq_temp.rb Formula/mimiq.rb
         sed "5s|.*|    sha256 \"$mimiq_shasum\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
