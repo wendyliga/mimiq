@@ -7,14 +7,17 @@ on:
       - '*'
 
 jobs:
-  upload_binary:
-    name: Upload Binary
+  upload_binary_update_formula:
+    name: Upload Binary & Update Homebrew Formula
     runs-on: macos-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v2
     - name: Compress Binary
-      run: make compress
+      run: |
+        make compress
+        mimiq_shasum=$(shasum -a 256 -t .build/mimiq.tar.gz | awk '{ print $1 }')
+        mimiq_version=$(awk '/version/{print $NF}' Sources/mimiq/Version.swift | sed -e 's/^"//' -e 's/"$//')
     - name: Upload Tar binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
@@ -31,37 +34,25 @@ jobs:
         asset_name: mimiq.zip
         tag: ${{ github.ref }}
         overwrite: true
-  create_homebrew_release:
-    name: Homebrew Release
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Build
-        run: make build
-      - name: Get mimiq Version and Checksum
-        run: |
-          mimiq_shasum=$(shasum -a 256 -t .build/release/mimiq | awk '{ print $1 }')
-          mimiq_version=$(awk '/version/{print $NF}' ../Sources/mimiq/Version.swift | sed -e 's/^"//' -e 's/"$//')
-      - name: Checkout to Homebrew core Repository
-        uses: actions/checkout@v2
-        with:
-            token: ${{ secrets.BOT_ACCESS_TOKEN }}
-            repository: wendyliga/homebrew-core
-            ref: refs/heads/master
-      - name: Update mimiq Formula
-        run: |
-          mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.tar.gz"
-          sed "4s|.*|    url \"$mimiq_binary_url\"|" mimiq.rb > mimiq_temp.rb
-          sed "5s|.*|    sha256 \"$mimiq_shasum\"|" mimiq.rb > mimiq_temp.rb
-          mv mimiq_temp.rb mimiq.rb
-      - name: Commit Changes
-        uses: EndBug/add-and-commit@v4
-        with:
-            author_name: Wendy's Github Bot
-            author_email: github-bot@wendyliga.com
-            message: 'update mimiq formula'
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_ACCESS_TOKEN }}
+    - name: Checkout to Homebrew core Repository
+      uses: actions/checkout@v2
+      with:
+          token: ${{ secrets.BOT_ACCESS_TOKEN }}
+          repository: wendyliga/homebrew-core
+          ref: refs/heads/master
+    - name: Update mimiq Formula
+      run: |
+        mimiq_binary_url="https://github.com/wendyliga/mimiq/releases/download/"${mimiq_version}"/mimiq.tar.gz"
+        sed "4s|.*|    url \"$mimiq_binary_url\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
+        sed "5s|.*|    sha256 \"$mimiq_shasum\"|" Formula/mimiq.rb > Formula/mimiq_temp.rb
+        mv Formula/mimiq_temp.rb Formula/mimiq.rb
+    - name: Commit Changes
+      uses: EndBug/add-and-commit@v4
+      with:
+          author_name: Wendy's Github Bot
+          author_email: github-bot@wendyliga.com
+          message: 'update mimiq formula'
+      env:
+        GITHUB_TOKEN: ${{ secrets.BOT_ACCESS_TOKEN }}
 
       
