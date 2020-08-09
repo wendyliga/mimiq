@@ -4,9 +4,9 @@ name: Unit Test
 on:
   push:
     branches: 
-      - master
+      - main
   pull_request:
-    branches: [master]
+    branches: [main]
     types: [synchronize, opened, reopened, ready_for_review]
       
 jobs:
