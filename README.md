@@ -37,6 +37,16 @@ install via homebrew
 brew install wendyliga/core/mimiq
 ```
 
+## Mint
+
+```shell
+# run without install
+mint run wendyliga/mimiq
+
+# or install
+mint install wendyliga/mimiq
+```
+
 ## Manual Install
 
 Clone Repo
