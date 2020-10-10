@@ -9,9 +9,9 @@ let package = Package(
         .executable(name: "mimiq", targets: ["mimiq"])
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-argument-parser", .upToNextMinor(from: "0.0.1")),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.1"),
         .package(url: "https://github.com/wendyliga/ConsoleIO.git", .upToNextMajor(from: "1.0.0")),
-        .package(url: "https://github.com/wendyliga/Explorer.git", from: "0.0.3"),
+        .package(url: "https://github.com/wendyliga/Explorer.git", from: "0.0.3")
     ],
     targets: [
         .target(

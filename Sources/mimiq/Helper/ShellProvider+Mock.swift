@@ -56,9 +56,9 @@ extension ShellProvider {
         completion((0, nil, nil))
     }
     
-    func convertMovToGif(
+    func generateOutput(
         movSource: String,
-        gifTarget: String,
+        outputTarget: String,
         quality: GIFQuality,
         customFFMpegPath: String?,
         printOutLog: Bool

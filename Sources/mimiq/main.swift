@@ -66,7 +66,7 @@ struct List: ParsableCommand {
     )
     
     @Flag(help: "Output available simulator to mimiq with JSON format")
-    var json: Bool
+    var json: Bool = false
     
     #if DEBUG
     enum Mode: String, ExpressibleByArgument {
@@ -144,7 +144,23 @@ struct Cache: ParsableCommand {
     }
 }
 
-struct Quality: ParsableCommand {
+struct OutputTypeList: ParsableCommand {
+    static var configuration = CommandConfiguration(
+      commandName: "output-type",
+      abstract: "List all output types",
+      discussion: ""
+    )
+    
+    func run() throws {
+        print("Available Quality")
+        
+        OutputType.allCases.forEach { value in
+            print("- \(value)")
+        }
+    }
+}
+
+struct QualityList: ParsableCommand {
     static var configuration = CommandConfiguration(
       commandName: "quality",
       abstract: "List available quality",
@@ -178,7 +194,10 @@ struct Record: ParsableCommand {
             .map { "- " + $0.rawValue }
             .joined(separator: "\n"))
         """,
-        subcommands: [Quality.self]
+        subcommands: [
+            QualityList.self,
+            OutputTypeList.self
+        ]
     )
     #else
     static var configuration = CommandConfiguration(
@@ -200,22 +219,24 @@ struct Record: ParsableCommand {
     
     @Option(
         name: .customLong("custom-ffmpeg"),
-        default: nil,
-        parsing: .scanningForValue,
         help: "Use Custom FFMpeg, provide it with the path to FFMpeg Binary Directory, Please Refer the Directory and not the Binary."
     )
     var customFFMpegPath: String?
     
     @Option(
         name: .shortAndLong,
-        default: .medium,
-        parsing: .scanningForValue,
+        help: "select output type, use mimiq record "
+    )
+    var output: OutputType = .gif
+    
+    @Option(
+        name: .shortAndLong,
         help: "Determine what quality mimiq will output on generated product, default will be medium"
     )
-    var quality: GIFQuality
+    var quality: GIFQuality = .medium
     
     @Flag(name: .short, help: "Execute mimiq with verbose log")
-    var isVerbose: Bool
+    var isVerbose: Bool = false
     
     #if DEBUG
     enum Mode: String, ExpressibleByArgument, CaseIterable {
@@ -445,10 +466,10 @@ struct Record: ParsableCommand {
         log("start creating GIF")
         print("⚙️  Creating GIF...")
         
-        let gifTargetPath = resultPath + mimiqFileName + ".gif"
-        let generateGIFResult = shellProvider.convertMovToGif(
+        let outputTargetPath = resultPath + mimiqFileName + "." + output.fileExtension
+        let generateGIFResult = shellProvider.generateOutput(
             movSource: movSource,
-            gifTarget: gifTargetPath,
+            outputTarget: outputTargetPath,
             quality: quality,
             customFFMpegPath: customFFMpegPath,
             printOutLog: isVerbose
@@ -470,8 +491,8 @@ struct Record: ParsableCommand {
         
         removeCache() // clear generated cache
         
-        log("GIF generated at \(gifTargetPath)")
-        print("✅ Grab your GIF at \(gifTargetPath)")
+        log("GIF generated at \(outputTargetPath)")
+        print("✅ Grab your GIF at \(outputTargetPath)")
     }
     
     private func log(_ message: String) {
@@ -506,7 +527,7 @@ struct Main: ParsableCommand {
             Record.self,
             List.self,
             Version.self,
-            Cache.self
+            Cache.self,
         ],
         defaultSubcommand: Record.self
     )

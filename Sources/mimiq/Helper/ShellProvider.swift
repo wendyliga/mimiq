@@ -45,7 +45,7 @@ protocol ShellProvider {
     var isFFMpegInstalled: Bool { get }
     var availableSimulators: [Simulator] { get }
     func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool, completion: @escaping (ShellResult) -> Void)
-    func convertMovToGif(movSource: String, gifTarget: String, quality: GIFQuality, customFFMpegPath: String?, printOutLog: Bool) -> ShellResult
+    func generateOutput(movSource: String, outputTarget: String, quality: GIFQuality, customFFMpegPath: String?, printOutLog: Bool) -> ShellResult
     func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error>
 }
 
@@ -142,7 +142,7 @@ final class DefaultShellProvider: ShellProvider {
             command.append("export PATH=$PATH:\(customFFMpegpath)")
         }
         
-        command.append(quality.gifCommand(source: movSource, target: gifTarget))
+        command.append(quality.ffmpegCommand(source: movSource, target: gifTarget))
         
         Log.default.write(#"executing ffmpeg with command "\#(command)""#, printOut: printOutLog)
         return shell(arguments: [command.joined(separator: ";")])

@@ -22,8 +22,45 @@
  SOFTWARE.
  */
 
-enum OutputResult {
+import ArgumentParser
+
+enum OutputType: String, CaseIterable, ExpressibleByArgument {
     case gif
     case mov
     case mp4
+    
+    /**
+     File extension
+     */
+    var fileExtension: String {
+        switch self {
+        case .gif:
+            return "gif"
+        case .mov:
+            return "mov"
+        case .mp4:
+            return "mp4"
+        }
+    }
+    
+    /**
+     generate gif command based on quality
+     
+     - Parameters:
+        - source: where source target path
+        - target: where output will be generated
+     */
+    func ffmpegCommand(source: String, target: String) -> String? {
+        switch self {
+        case .gif:
+            /// ffmpeg command will use `GIFQuality` one.
+            return nil
+        case .mov:
+            /// no ffmpeg process
+            return nil
+        case .mp4:
+            return """
+            """
+        }
+    }
 }
