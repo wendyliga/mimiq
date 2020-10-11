@@ -65,7 +65,7 @@ final class DefaultShellProvider: ShellProvider {
         
         guard
             simulatorRuntimeListShellExecution.status == 0,
-            let runtimeListRawData = simulatorRuntimeListShellExecution.output?.data(using: .utf8),
+            let runtimeListRawData = simulatorRuntimeListShellExecution.output?.rawValue.data(using: .utf8),
             let runtimes = try? JSONDecoder().decode([Runtime].self, from: runtimeListRawData, keyPath: "runtimes")
         else {
             return []
@@ -92,7 +92,7 @@ final class DefaultShellProvider: ShellProvider {
         
         guard
             simulatorListShellExecution.status == 0,
-            let simulatorListRawData = simulatorListShellExecution.output?.data(using: .utf8),
+            let simulatorListRawData = simulatorListShellExecution.output?.rawValue.data(using: .utf8),
             let simulatorListJsonSerialization = try? JSONSerialization.jsonObject(with: simulatorListRawData, options: .allowFragments) as? [String: Any],
             let deviceJsonSeralization = simulatorListJsonSerialization["devices"] as? [String: [[String: Any]]]
         else {
@@ -121,7 +121,7 @@ final class DefaultShellProvider: ShellProvider {
         let recordCommand = "xcrun simctl io \(target.udid.uuidString) recordVideo -f \(movTarget)"
         let recordMessage = "🔨 Recording Simulator \(target.name) with UDID \(target.udid)... Press Enter to Stop.)"
         
-        Log.default.write(#"start recording with command "\#(recordCommand)""#, printOut: printOutLog)
+//        Log.default.write(#"start recording with command "\#(recordCommand)""#, printOut: printOutLog)
         
         mustInteruptShell(arguments: [recordCommand], message: recordMessage, completion: completion)
     }
@@ -143,14 +143,14 @@ final class DefaultShellProvider: ShellProvider {
         
         switch type {
         case .gif:
-            Log.default.write("Output will be created on \(outputTarget), with \(quality) quality", printOut: printOutLog)
+//            Log.default.write("Output will be created on \(outputTarget), with \(quality) quality", printOut: printOutLog)
             command.append(quality.ffmpegCommand(source: movSource, target: outputTarget))
         case .mov, .mp4:
-            Log.default.write("Output will be created on \(outputTarget)", printOut: printOutLog)
+//            Log.default.write("Output will be created on \(outputTarget)", printOut: printOutLog)
             command.append(type.ffmpegCommand(source: movSource, target: outputTarget))
         }
         
-        Log.default.write(#"executing "\#(command)""#, printOut: printOutLog)
+//        Log.default.write(#"executing "\#(command)""#, printOut: printOutLog)
         return shell(arguments: [command.joined(separator: ";")])
     }
     

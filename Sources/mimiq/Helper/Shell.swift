@@ -24,8 +24,29 @@
 
 import Foundation
 import ConsoleIO
+import Tagged
 
-typealias ShellResult = (status: Int32, output: String?, errorOuput: String?)
+enum _ShellSuccessOutput {}
+typealias ShellSuccessOutput = Tagged<_ShellSuccessOutput, String>
+
+extension ShellSuccessOutput {
+    internal init?(rawValue: String?) {
+        guard let rawValue = rawValue else { return nil }
+        self.init(rawValue: rawValue)
+    }
+}
+
+enum _ShellErrorOutput {}
+typealias ShellErrorOutput = Tagged<_ShellErrorOutput, String>
+
+extension ShellErrorOutput {
+    internal init?(rawValue: String?) {
+        guard let rawValue = rawValue else { return nil }
+        self.init(rawValue: rawValue)
+    }
+}
+
+typealias ShellResult = (status: Int32, output: ShellSuccessOutput?, errorOuput: ShellErrorOutput?)
 
 @discardableResult
 func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> ShellResult {
@@ -48,7 +69,11 @@ func shell(launchPath: String = "/usr/bin/env", arguments: [String]) -> ShellRes
     let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
     let errorOuput = String(data: errorData, encoding: String.Encoding.utf8)
     
-    return (status: task.terminationStatus, output: output, errorOuput: errorOuput)
+    return (
+        status: task.terminationStatus,
+        output: ShellSuccessOutput(rawValue: output),
+        errorOuput: ShellErrorOutput(rawValue: errorOuput)
+    )
 }
 
 func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String], message: String, completion: @escaping (ShellResult) -> Void) {
@@ -65,22 +90,22 @@ func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String],
     DispatchQueue.global(qos: .background).async {
         task.launch()
         
-        if !task.isRunning {
-            print("❌ Task failed to run")
-            Log.default.write("task failed to run")
-        }
+//        if !task.isRunning {
+//            print("❌ Task failed to run")
+//            Log.default.write("task failed to run")
+//        }
     }
     
     input(message, defaultValue: "", afterValidation: { _ in
-        print("⚙️  Stopping...")
-        Log.default.write("stopping simulator recording process")
+//        print("⚙️  Stopping...")
+//        Log.default.write("stopping simulator recording process")
         
         if task.isRunning {
            task.interrupt()
-           Log.default.write("interrupting task...")
+//           Log.default.write("interrupting task...")
         } else {
             print("❌ No Task run")
-            Log.default.write("task not running")
+//            Log.default.write("task not running")
         }
     })
     
@@ -91,7 +116,11 @@ func mustInteruptShell(launchPath: String = "/usr/bin/env", arguments: [String],
         let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
         let errorOuput = String(data: errorData, encoding: String.Encoding.utf8)
         
-        Log.default.write("handle completion status \(task.terminationStatus)")
-        completion((status: task.terminationStatus, output: output, errorOuput: errorOuput))
+//        Log.default.write("handle completion status \(task.terminationStatus)")
+        completion((
+            status: task.terminationStatus,
+            output: ShellSuccessOutput(rawValue: output),
+            errorOuput: ShellErrorOutput(rawValue: errorOuput)
+        ))
     }
 }
