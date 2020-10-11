@@ -10,9 +10,20 @@ on:
     types: [synchronize, opened, reopened, ready_for_review]
       
 jobs:
+  macos_build_release:
+    name: MacOS Build Release
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Build Release
+      run: make build
   macos_test:
     name: MacOS Unit Test
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+           os: [macos-latest, macos-10.15, macOS-10.14]
     steps:
     - name: Checkout
       uses: actions/checkout@v2
