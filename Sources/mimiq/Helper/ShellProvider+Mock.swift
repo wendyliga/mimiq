@@ -112,9 +112,10 @@ final class FailedRecordShellProvider: ShellProvider {
 }
 
 final class FailedConvertingGIFShellProvider: ShellProvider {
-    func convertMovToGif(
+    func generateOutput(
+        _ type: OutputType,
         movSource: String,
-        gifTarget: String,
+        outputTarget: String,
         quality: GIFQuality,
         customFFMpegPath: String?,
         printOutLog: Bool

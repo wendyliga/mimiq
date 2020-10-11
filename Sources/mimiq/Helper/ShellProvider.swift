@@ -134,8 +134,6 @@ final class DefaultShellProvider: ShellProvider {
         customFFMpegPath: String?,
         printOutLog: Bool
     ) -> ShellResult {
-        Log.default.write("GIF will be created on \(outputTarget), with \(quality) quality", printOut: printOutLog)
-        
         var command = [String]()
         
         if let customFFMpegpath = customFFMpegPath {
@@ -145,12 +143,14 @@ final class DefaultShellProvider: ShellProvider {
         
         switch type {
         case .gif:
+            Log.default.write("Output will be created on \(outputTarget), with \(quality) quality", printOut: printOutLog)
             command.append(quality.ffmpegCommand(source: movSource, target: outputTarget))
         case .mov, .mp4:
+            Log.default.write("Output will be created on \(outputTarget)", printOut: printOutLog)
             command.append(type.ffmpegCommand(source: movSource, target: outputTarget))
         }
         
-        Log.default.write(#"executing ffmpeg with command "\#(command)""#, printOut: printOutLog)
+        Log.default.write(#"executing "\#(command)""#, printOut: printOutLog)
         return shell(arguments: [command.joined(separator: ";")])
     }
     

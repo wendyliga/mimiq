@@ -59,8 +59,8 @@ enum OutputType: String, CaseIterable, ExpressibleByArgument {
             /// no ffmpeg process
             return "cp \(source) \(target)"
         case .mp4:
-            return """
-            """
+            /// provide user to change video and audio codec ?
+            return "ffmpeg -i \(source) -vcodec h264 -acodec mp2 \(target)"
         }
     }
 }

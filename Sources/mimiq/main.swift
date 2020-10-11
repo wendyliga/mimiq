@@ -152,7 +152,7 @@ struct OutputTypeList: ParsableCommand {
     )
     
     func run() throws {
-        print("Available Quality")
+        print("Available Output Type")
         
         OutputType.allCases.forEach { value in
             print("- \(value)")
@@ -185,7 +185,7 @@ struct Record: ParsableCommand {
         abstract:
         """
 
-        Record your Xcode simulator and convert it to GIF
+        Record your Xcode simulator and convert it to GIF, MP4 or Mov
         """,
         discussion:
         """
@@ -204,14 +204,14 @@ struct Record: ParsableCommand {
       commandName: "record",
       abstract:
         """
-        Record your Xcode simulator and convert it to GIF
+        Record your Xcode simulator and convert it to GIF, MP4 or Mov
         
         """,
         subcommands: [Quality.self]
     )
     #endif
     
-    @Option(help: "Destination path you want to place \(appName) generated GIF")
+    @Option(help: "Destination path you want to place \(appName) output")
     var path: String?
     
     @Option(help: "Select Spesific simulator based on its UDID, run `\(appName) list` to check available simulator")
@@ -231,7 +231,7 @@ struct Record: ParsableCommand {
     
     @Option(
         name: .shortAndLong,
-        help: "Determine what quality mimiq will output on generated product, default will be medium"
+        help: "Determine what GIF quality mimiq will output, default will be medium. only needed if you select `gif` as output"
     )
     var quality: GIFQuality = .medium
     
@@ -463,8 +463,8 @@ struct Record: ParsableCommand {
         
         // MARK: - Convert Mov to Gif
         
-        log("start creating GIF")
-        print("⚙️  Creating GIF...")
+        log("start creating output")
+        print("⚙️  Creating output...")
         
         let outputTargetPath = resultPath + mimiqFileName + "." + output.fileExtension
         let generateGIFResult = shellProvider.generateOutput(
@@ -478,22 +478,22 @@ struct Record: ParsableCommand {
         
         guard generateGIFResult.status == 0 else {
             // clear generated cache
-//            removeCache()
-            log("error generating GIF")
+            removeCache()
+            log("error generating output")
             logShellOutput(generateGIFResult.output ?? "no ouput")
             logShellOutput(generateGIFResult.errorOuput ?? "no error ouput")
             
-            print("💥 Failed on Creating GIF, Please Try Again")
+            print("💥 Failed on Creating output, Please Try Again")
             Darwin.exit(EXIT_FAILURE)
         }
         
-        log("success generating GIF")
+        log("success generating output")
         logShellOutput(generateGIFResult.output)
         
-//        removeCache() // clear generated cache
+        removeCache() // clear generated cache
         
-        log("GIF generated at \(outputTargetPath)")
-        print("✅ Grab your GIF at \(outputTargetPath)")
+        log("output generated at \(outputTargetPath)")
+        print("✅ Grab your output at \(outputTargetPath)")
     }
     
     private func log(_ message: String) {
@@ -515,7 +515,7 @@ struct Main: ParsableCommand {
         abstract:
         """
 
-        Record your Xcode simulator and convert it to GIF
+        Record your Xcode simulator and convert it to GIF, MP4 or Mov
         """,
         discussion:
         """
