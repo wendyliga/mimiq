@@ -19,7 +19,7 @@
 
 
 
-mimiq is simple executable to record your Xcode simulator and convert it to GIF.
+mimiq is simple executable to record your Xcode simulator and convert it to several video type like gif, mp4 or mov.
 
 # Installation
 
@@ -69,6 +69,21 @@ mimiq
 Just simple to call `mimiq`, it will automatically detect current running simulator and record it for you
 
 ### Additional Options
+#### 🆕 Set Custom Output type
+previously `mimiq` is focus on recording GIF from your simulator, but from feedback on early user of mimiq, it has big potential, not just GIF.
+so on `0.5.0`, mimiq extend itself to support outputing format like mp4 and mov also.
+
+available output
+```
+- gif
+- mov
+- mp4
+```
+
+```shell
+mimiq --output mp4
+```
+
 #### 🆕 Support Custom GIF Quality
 you can specify what quality of GIF, mimiq will generate.
 
@@ -83,8 +98,8 @@ how to use
 mimiq --quality high
 ```
 
-#### Set custom GIF Path
-you can set where `mimiq` will place the generated gif. for default, `mimiq` will generate gif on desktop, but if you want to change it then, when start `mimiq` add this additional params
+#### Set custom Path
+you can set where `mimiq` will place the generated output. for default, `mimiq` will generate output on desktop, but if you want to change it then, when start `mimiq` add this additional params
 
 ```shell
 mimiq --path "~/...path/directory/folder"
@@ -112,7 +127,7 @@ mimiq --udid 6ABC274C-76BB-483B-8DD6-8A9F8E486E0F
 ```
 press `enter`
 ```
-to stop, just press `enter`. then grab your generated gif
+to stop, just press `enter`. then grab your generated output
 
 ### Result
 
