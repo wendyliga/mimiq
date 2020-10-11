@@ -20,7 +20,7 @@ jobs:
       run: make build
   macos_test:
     name: MacOS Unit Test
-    runs-on: ${{ matrix.job.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
         matrix:
            os: [macos-latest, macos-10.15, macOS-10.14]
