@@ -66,7 +66,7 @@ struct List: ParsableCommand {
     )
     
     @Flag(help: "Output available simulator to mimiq with JSON format")
-    var json: Bool
+    var json: Bool = false
     
     #if DEBUG
     enum Mode: String, ExpressibleByArgument {
@@ -144,7 +144,23 @@ struct Cache: ParsableCommand {
     }
 }
 
-struct Quality: ParsableCommand {
+struct OutputTypeList: ParsableCommand {
+    static var configuration = CommandConfiguration(
+      commandName: "output-type",
+      abstract: "List all output types",
+      discussion: ""
+    )
+    
+    func run() throws {
+        print("Available Output Type")
+        
+        OutputType.allCases.forEach { value in
+            print("- \(value)")
+        }
+    }
+}
+
+struct QualityList: ParsableCommand {
     static var configuration = CommandConfiguration(
       commandName: "quality",
       abstract: "List available quality",
@@ -169,7 +185,7 @@ struct Record: ParsableCommand {
         abstract:
         """
 
-        Record your Xcode simulator and convert it to GIF
+        Record your Xcode simulator and convert it to GIF, MP4 or Mov
         """,
         discussion:
         """
@@ -178,21 +194,24 @@ struct Record: ParsableCommand {
             .map { "- " + $0.rawValue }
             .joined(separator: "\n"))
         """,
-        subcommands: [Quality.self]
+        subcommands: [
+            QualityList.self,
+            OutputTypeList.self
+        ]
     )
     #else
     static var configuration = CommandConfiguration(
       commandName: "record",
       abstract:
         """
-        Record your Xcode simulator and convert it to GIF
+        Record your Xcode simulator and convert it to GIF, MP4 or Mov
         
         """,
         subcommands: [Quality.self]
     )
     #endif
     
-    @Option(help: "Destination path you want to place \(appName) generated GIF")
+    @Option(help: "Destination path you want to place \(appName) output")
     var path: String?
     
     @Option(help: "Select Spesific simulator based on its UDID, run `\(appName) list` to check available simulator")
@@ -200,22 +219,24 @@ struct Record: ParsableCommand {
     
     @Option(
         name: .customLong("custom-ffmpeg"),
-        default: nil,
-        parsing: .scanningForValue,
         help: "Use Custom FFMpeg, provide it with the path to FFMpeg Binary Directory, Please Refer the Directory and not the Binary."
     )
     var customFFMpegPath: String?
     
     @Option(
         name: .shortAndLong,
-        default: .medium,
-        parsing: .scanningForValue,
-        help: "Determine what quality mimiq will output on generated product, default will be medium"
+        help: "select output type, use mimiq record "
     )
-    var quality: GIFQuality
+    var output: OutputType = .gif
+    
+    @Option(
+        name: .shortAndLong,
+        help: "Determine what GIF quality mimiq will output, default will be medium. only needed if you select `gif` as output"
+    )
+    var quality: GIFQuality = .medium
     
     @Flag(name: .short, help: "Execute mimiq with verbose log")
-    var isVerbose: Bool
+    var isVerbose: Bool = false
     
     #if DEBUG
     enum Mode: String, ExpressibleByArgument, CaseIterable {
@@ -442,13 +463,14 @@ struct Record: ParsableCommand {
         
         // MARK: - Convert Mov to Gif
         
-        log("start creating GIF")
-        print("⚙️  Creating GIF...")
+        log("start creating output")
+        print("⚙️  Creating output...")
         
-        let gifTargetPath = resultPath + mimiqFileName + ".gif"
-        let generateGIFResult = shellProvider.convertMovToGif(
+        let outputTargetPath = resultPath + mimiqFileName + "." + output.fileExtension
+        let generateGIFResult = shellProvider.generateOutput(
+            output,
             movSource: movSource,
-            gifTarget: gifTargetPath,
+            outputTarget: outputTargetPath,
             quality: quality,
             customFFMpegPath: customFFMpegPath,
             printOutLog: isVerbose
@@ -457,21 +479,21 @@ struct Record: ParsableCommand {
         guard generateGIFResult.status == 0 else {
             // clear generated cache
             removeCache()
-            log("error generating GIF")
+            log("error generating output")
             logShellOutput(generateGIFResult.output ?? "no ouput")
             logShellOutput(generateGIFResult.errorOuput ?? "no error ouput")
             
-            print("💥 Failed on Creating GIF, Please Try Again")
+            print("💥 Failed on Creating output, Please Try Again")
             Darwin.exit(EXIT_FAILURE)
         }
         
-        log("success generating GIF")
+        log("success generating output")
         logShellOutput(generateGIFResult.output)
         
         removeCache() // clear generated cache
         
-        log("GIF generated at \(gifTargetPath)")
-        print("✅ Grab your GIF at \(gifTargetPath)")
+        log("output generated at \(outputTargetPath)")
+        print("✅ Grab your output at \(outputTargetPath)")
     }
     
     private func log(_ message: String) {
@@ -493,7 +515,7 @@ struct Main: ParsableCommand {
         abstract:
         """
 
-        Record your Xcode simulator and convert it to GIF
+        Record your Xcode simulator and convert it to GIF, MP4 or Mov
         """,
         discussion:
         """
@@ -506,7 +528,7 @@ struct Main: ParsableCommand {
             Record.self,
             List.self,
             Version.self,
-            Cache.self
+            Cache.self,
         ],
         defaultSubcommand: Record.self
     )

@@ -87,8 +87,8 @@ final class mimiqTests: XCTestCase {
     
     func test_record_failMakeGIF() throws {
         let expected = [
-            "⚙️  Creating GIF...",
-            "💥 Failed on Creating GIF, Please Try Again",
+            "⚙️  Creating output...",
+            "💥 Failed on Creating output, Please Try Again",
             ""]
             .joined(separator: "\n")
         
@@ -97,8 +97,8 @@ final class mimiqTests: XCTestCase {
     
     func test_record_success() throws {
         let expected = [
-            "⚙️  Creating GIF...",
-            "✅ Grab your GIF at ~/Desktop/mimiq.gif",
+            "⚙️  Creating output...",
+            "✅ Grab your output at ~/Desktop/mimiq.gif",
             ""]
             .joined(separator: "\n")
         
@@ -106,7 +106,7 @@ final class mimiqTests: XCTestCase {
     }
     
     func test_checkVersion() throws {
-        let expected = "current version 0.4.1\n"
+        let expected = "current version 0.5.0\n"
         
         XCTAssertEqual(try shellProcess(args: ["version"]), expected)
     }
@@ -121,6 +121,18 @@ final class mimiqTests: XCTestCase {
         """
         
         XCTAssertEqual(try shellProcess(args: ["quality"]), expected)
+    }
+    
+    func test_listOutputType() throws {
+        let expected = """
+        Available Output Type
+        - gif
+        - mov
+        - mp4
+
+        """
+        
+        XCTAssertEqual(try shellProcess(args: ["output-type"]), expected)
     }
     
     func test_listSimulator_exist() throws {

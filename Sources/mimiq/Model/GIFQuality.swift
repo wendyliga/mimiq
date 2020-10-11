@@ -36,7 +36,7 @@ enum GIFQuality: String, ExpressibleByArgument, CaseIterable {
         - source: where source target path
         - target: where gif will be generated
      */
-    func gifCommand(source: String, target: String) -> String {
+    func ffmpegCommand(source: String, target: String) -> String {
         switch self {
         case .low:
             let setPallete = #"palette="/tmp/palette.png""#
