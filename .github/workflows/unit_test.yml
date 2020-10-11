@@ -11,7 +11,7 @@ on:
       
 jobs:
   macos_build_release:
-    name: MacOS Unit Test
+    name: MacOS Build Release
     runs-on: macos-latest
     steps:
     - name: Checkout
