@@ -45,7 +45,7 @@ protocol ShellProvider {
     var isFFMpegInstalled: Bool { get }
     var availableSimulators: [Simulator] { get }
     func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool, completion: @escaping (ShellResult) -> Void)
-    func generateOutput(movSource: String, outputTarget: String, quality: GIFQuality, customFFMpegPath: String?, printOutLog: Bool) -> ShellResult
+    func generateOutput(_ type: OutputType, movSource: String, outputTarget: String, quality: GIFQuality, customFFMpegPath: String?, printOutLog: Bool) -> ShellResult
     func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error>
 }
 
@@ -126,14 +126,15 @@ final class DefaultShellProvider: ShellProvider {
         mustInteruptShell(arguments: [recordCommand], message: recordMessage, completion: completion)
     }
     
-    func convertMovToGif(
+    func generateOutput(
+        _ type: OutputType,
         movSource: String,
-        gifTarget: String,
+        outputTarget: String,
         quality: GIFQuality,
         customFFMpegPath: String?,
         printOutLog: Bool
     ) -> ShellResult {
-        Log.default.write("GIF will be created on \(gifTarget), with \(quality) quality", printOut: printOutLog)
+        Log.default.write("GIF will be created on \(outputTarget), with \(quality) quality", printOut: printOutLog)
         
         var command = [String]()
         
@@ -142,7 +143,12 @@ final class DefaultShellProvider: ShellProvider {
             command.append("export PATH=$PATH:\(customFFMpegpath)")
         }
         
-        command.append(quality.ffmpegCommand(source: movSource, target: gifTarget))
+        switch type {
+        case .gif:
+            command.append(quality.ffmpegCommand(source: movSource, target: outputTarget))
+        case .mov, .mp4:
+            command.append(type.ffmpegCommand(source: movSource, target: outputTarget))
+        }
         
         Log.default.write(#"executing ffmpeg with command "\#(command)""#, printOut: printOutLog)
         return shell(arguments: [command.joined(separator: ";")])

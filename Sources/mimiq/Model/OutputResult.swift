@@ -50,14 +50,14 @@ enum OutputType: String, CaseIterable, ExpressibleByArgument {
         - source: where source target path
         - target: where output will be generated
      */
-    func ffmpegCommand(source: String, target: String) -> String? {
+    func ffmpegCommand(source: String, target: String) -> String {
         switch self {
         case .gif:
             /// ffmpeg command will use `GIFQuality` one.
-            return nil
+            return ""
         case .mov:
             /// no ffmpeg process
-            return nil
+            return "cp \(source) \(target)"
         case .mp4:
             return """
             """

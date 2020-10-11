@@ -57,6 +57,7 @@ extension ShellProvider {
     }
     
     func generateOutput(
+        _ type: OutputType,
         movSource: String,
         outputTarget: String,
         quality: GIFQuality,

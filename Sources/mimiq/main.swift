@@ -468,6 +468,7 @@ struct Record: ParsableCommand {
         
         let outputTargetPath = resultPath + mimiqFileName + "." + output.fileExtension
         let generateGIFResult = shellProvider.generateOutput(
+            output,
             movSource: movSource,
             outputTarget: outputTargetPath,
             quality: quality,
@@ -477,7 +478,7 @@ struct Record: ParsableCommand {
         
         guard generateGIFResult.status == 0 else {
             // clear generated cache
-            removeCache()
+//            removeCache()
             log("error generating GIF")
             logShellOutput(generateGIFResult.output ?? "no ouput")
             logShellOutput(generateGIFResult.errorOuput ?? "no error ouput")
@@ -489,7 +490,7 @@ struct Record: ParsableCommand {
         log("success generating GIF")
         logShellOutput(generateGIFResult.output)
         
-        removeCache() // clear generated cache
+//        removeCache() // clear generated cache
         
         log("GIF generated at \(outputTargetPath)")
         print("✅ Grab your GIF at \(outputTargetPath)")
