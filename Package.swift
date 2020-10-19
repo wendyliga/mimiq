@@ -6,7 +6,8 @@ import PackageDescription
 let package = Package(
     name: "mimiq",
     products: [
-        .executable(name: "mimiq", targets: ["mimiq"])
+        .executable(name: "mimiq", targets: ["mimiq"]),
+        .library(name: "MimiqCore", targets: ["mimiq-core"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.1"),
@@ -18,7 +19,11 @@ let package = Package(
     targets: [
         .target(
             name: "mimiq",
-            dependencies: ["ArgumentParser", "Explorer", "ConsoleIO", "Logging", "Tagged"]
+            dependencies: ["ArgumentParser", "Explorer", "ConsoleIO", "Logging", "Tagged", "mimiq-core"]
+        ),
+        .target(
+            name: "mimiq-core",
+            dependencies: ["ConsoleIO", "Logging", "Tagged"]
         ),
         .testTarget(
             name: "mimiqTests",

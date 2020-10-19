@@ -24,6 +24,7 @@ SOFTWARE.
 
 import XCTest
 import class Foundation.Bundle
+import mimiq_core
 
 final class mimiqTests: XCTestCase {
     /// Returns path to the built products directory.
@@ -38,77 +39,74 @@ final class mimiqTests: XCTestCase {
       #endif
     }
     
-    func shellProcess(args: [String]) throws -> String? {
-        guard #available(macOS 10.13, *) else {
-            return nil
-        }
+    func shellProcess(args: [String]) throws -> Shell.Result {
+        /// remove `file://` from foo Binary url path
+        var fooBinary = productsDirectory.appendingPathComponent("mimiq").absoluteString
+        fooBinary.removeFirst(7)
         
-        let fooBinary = productsDirectory.appendingPathComponent("mimiq")
-
-        let process = Process()
-        process.executableURL = fooBinary
-        process.arguments = args
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-
-        try process.run()
-        process.waitUntilExit()
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: data, encoding: .utf8)
-        
-        return output
+        return Shell.execute(launchPath: fooBinary, arguments: args, executingWithBash: false)
     }
     
     func test_record_noHomebrewInstalled() throws {
         let expected = "💥 Missing Homebrew, please install Homebrew, for more visit https://brew.sh\n"
+        let shellResult = try shellProcess(args: ["record", "--mode", "noHomebrew"])
         
-        XCTAssertEqual(try shellProcess(args: ["--mode", "noHomebrew"]), expected)
+        XCTAssertEqual(shellResult.errorOuput?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 1)
     }
     
     func test_record_noFFMpegInstalled() throws {
         let expected = "💥 Missing FFMpeg, please install mpeg, by executing `brew install ffmpeg`\n"
+        let shellResult = try shellProcess(args: ["--mode", "noFFMpeg"])
         
-        XCTAssertEqual(try shellProcess(args: ["--mode", "noFFMpeg"]), expected)
+        XCTAssertEqual(shellResult.errorOuput?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 1)
     }
     
     func test_record_noSimulator() throws {
         let expected = "💥 No Available Simulator to mimiq\n"
+        let shellResult = try shellProcess(args: ["--mode", "noSimulator"])
         
-        XCTAssertEqual(try shellProcess(args: ["--mode", "noSimulator"]), expected)
+        XCTAssertEqual(shellResult.errorOuput?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 1)
     }
     
     func test_record_failRecord() throws {
         let expected = "💥 Record Failed, Please Try Again\n"
+        let shellResult = try shellProcess(args: ["--mode", "failRecord"])
         
-        XCTAssertEqual(try shellProcess(args: ["--mode", "failRecord"]), expected)
+        XCTAssertEqual(shellResult.errorOuput?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 1)
     }
     
     func test_record_failMakeGIF() throws {
-        let expected = [
-            "⚙️  Creating output...",
-            "💥 Failed on Creating output, Please Try Again",
-            ""]
-            .joined(separator: "\n")
+        let output = "⚙️ Creating output...\n"
+        let errorOutput = "💥 Failed on Creating output, Please Try Again\n"
+        let shellResult = try shellProcess(args: ["--mode", "failMakeGIF"])
         
-        XCTAssertEqual(try shellProcess(args: ["--mode", "failMakeGIF"]), expected)
+        XCTAssertEqual(shellResult.output?.rawValue, output)
+        XCTAssertEqual(shellResult.errorOuput?.rawValue, errorOutput)
+        XCTAssertEqual(shellResult.status, 1)
     }
     
     func test_record_success() throws {
         let expected = [
-            "⚙️  Creating output...",
+            "⚙️ Creating output...",
             "✅ Grab your output at ~/Desktop/mimiq.gif",
             ""]
             .joined(separator: "\n")
+        let shellResult = try shellProcess(args: ["--mode", "success"])
         
-        XCTAssertEqual(try shellProcess(args: ["--mode", "success"]), expected)
+        XCTAssertEqual(shellResult.output?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 0)
     }
     
     func test_checkVersion() throws {
         let expected = "current version 0.5.0\n"
+        let shellResult = try shellProcess(args: ["version"])
         
-        XCTAssertEqual(try shellProcess(args: ["version"]), expected)
+        XCTAssertEqual(shellResult.output?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 0)
     }
     
     func test_listQuality() throws {
@@ -119,8 +117,10 @@ final class mimiqTests: XCTestCase {
         - high
 
         """
+        let shellResult = try shellProcess(args: ["quality"])
         
-        XCTAssertEqual(try shellProcess(args: ["quality"]), expected)
+        XCTAssertEqual(shellResult.output?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 0)
     }
     
     func test_listOutputType() throws {
@@ -131,8 +131,10 @@ final class mimiqTests: XCTestCase {
         - mp4
 
         """
+        let shellResult = try shellProcess(args: ["output-type"])
         
-        XCTAssertEqual(try shellProcess(args: ["output-type"]), expected)
+        XCTAssertEqual(shellResult.output?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 0)
     }
     
     func test_listSimulator_exist() throws {
@@ -143,38 +145,33 @@ final class mimiqTests: XCTestCase {
             ""]
             .joined(separator: "\n")
         
-        XCTAssertEqual(try shellProcess(args: ["list", "--mode", "available"]), expected)
+        let shellResult = try shellProcess(args: ["list", "--mode", "available"])
+        
+        XCTAssertEqual(shellResult.output?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 0)
     }
     
     func test_listSimulator_notExist() throws {
         let expected = "💥 No Available Simulator to mimiq\n"
+        let shellResult = try shellProcess(args: ["list", "--mode", "none"])
         
-        XCTAssertEqual(try shellProcess(args: ["list", "--mode", "none"]), expected)
+        XCTAssertEqual(shellResult.output?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 0)
     }
     
     func test_listSimulatorJSON_exist() throws {
         let expected = "[{\"name\":\"Mimiq Simulator\",\"udid\":\"00000000-0000-0000-0000-000000000000\"},{\"name\":\"Mimiq Simulator #2\",\"udid\":\"11111111-1111-1111-1111-111111111111\"}]\n"
+        let shellResult = try shellProcess(args: ["list", "--mode", "available", "--json"])
         
-        XCTAssertEqual(try shellProcess(args: ["list", "--mode", "available", "--json"]), expected)
+        XCTAssertEqual(shellResult.output?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 0)
     }
     
     func test_listSimulatorJSON_notExist() throws {
         let expected = "[]\n"
+        let shellResult = try shellProcess(args: ["list", "--mode", "none", "--json"])
         
-        XCTAssertEqual(try shellProcess(args: ["list", "--mode", "none", "--json"]), expected)
+        XCTAssertEqual(shellResult.output?.rawValue, expected)
+        XCTAssertEqual(shellResult.status, 0)
     }
-
-    static var allTests = [
-        ("test_record_noHomebrewInstalled", test_record_noHomebrewInstalled),
-        ("test_record_noFFMpegInstalled", test_record_noFFMpegInstalled),
-        ("test_record_noSimulator", test_record_noSimulator),
-        ("test_record_failRecord", test_record_failRecord),
-        ("test_record_failMakeGIF", test_record_failMakeGIF),
-        ("test_record_success", test_record_success),
-        ("test_checkVersion", test_checkVersion),
-        ("test_listSimulator_exist", test_listSimulator_exist),
-        ("test_listSimulator_notExist", test_listSimulator_notExist),
-        ("test_listSimulatorJSON_exist", test_listSimulatorJSON_exist),
-        ("test_listSimulatorJSON_notExist", test_listSimulatorJSON_notExist)
-    ]
 }

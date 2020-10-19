@@ -25,6 +25,7 @@
 import Explorer
 import Foundation
 import Logging
+import mimiq_core
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
 import Darwin
@@ -72,7 +73,7 @@ extension Logger {
     }
     
     func shellOutput(
-        _ message: ShellSuccessOutput?,
+        _ message: Shell.SuccessOutput?,
         metadata: @autoclosure () -> Logger.Metadata? = nil,
         source: @autoclosure () -> String? = nil,
         file: String = #file,
@@ -92,7 +93,7 @@ extension Logger {
     }
     
     func shellOutput(
-        _ message: ShellErrorOutput?,
+        _ message: Shell.ErrorOutput?,
         metadata: @autoclosure () -> Logger.Metadata? = nil,
         source: @autoclosure () -> String? = nil,
         file: String = #file,
@@ -229,7 +230,7 @@ struct DefaultStdioOutputLogHandler: LogHandler {
             ? self.prettyMetadata
             : (self.metadata.merging(metadata!, uniquingKeysWith: { _, new in new })).prettify
         
-        if isVerbose || (!isVerbose && level == .info) {
+        if isVerbose || (!isVerbose && (level == .info || level == .error)) {
             let stream: StdioOutputStream = {
                 switch level {
                 case .info, .debug, .trace, .notice, .warning:
@@ -239,14 +240,15 @@ struct DefaultStdioOutputLogHandler: LogHandler {
                 }
             }()
             
-            var output = ""
+            var output: [String] = []
             
             if isVerbose {
                 output.append("\(level) \(self.label) :\(prettyMetadata.map { " \($0)" } ?? "")")
             }
             
-            output.append(" \(message)\n")
-            stream.write(output)
+            output.append("\(message)\n")
+            
+            stream.write(output.joined(separator: " "))
         }
     }
 }
@@ -323,33 +325,3 @@ struct WriteToFileLogHandler: LogHandler {
         Explorer.default.write(operation: operation, writingStrategy: .overwrite)
     }
 }
-//class Log {
-//    static let `default` = Log()
-//
-//    private let dateFormatter = DateFormatter()
-//    private let logFileName: String
-//    private let logFileExtension = "log"
-//    private var logs: [String] = []
-//
-//    init() {
-//        // Log file name
-//        dateFormatter.dateFormat = "yyyyMMddHHmmss"
-//        logFileName = dateFormatter.string(from: Date())
-//    }
-    
-//    @discardableResult
-//    func write(_ message: String, printOut: Bool = false) -> Result<Bool, Error> {
-//        if printOut {
-//            print(message)
-//        }
-//
-//        dateFormatter.dateFormat = "HH:mm:ss"
-//        let newLog = "[\(dateFormatter.string(from: Date()))] \(message)"
-//        logs.append(newLog)
-//
-        
-        
-//
-        
-//    }
-//}

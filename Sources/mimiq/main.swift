@@ -34,6 +34,7 @@ import ArgumentParser
 import Explorer
 import Foundation
 import Logging
+import mimiq_core
 
 // MARK: - Configuration
 
@@ -62,7 +63,7 @@ func configureEnvironment() -> Result<SingleFolderOperation, Error> {
 func removeCache() {
     // delete created file
     // TODO: convert it to Explorer
-//    Log.default.write(#"remove temp folder output \#(shell(arguments: ["rm -rf \(tempFolder)"]))"#)
+    Shell.execute(arguments: ["rm -rf \(tempFolder)"])
 }
 
 // MARK: - Argument
@@ -117,7 +118,6 @@ struct List: ParsableCommand {
                 let jsonData = try jsonEncoder.encode(availableSimulators)
                 outputs.append(String(data: jsonData, encoding: .utf8) ?? "[]")
             } catch {
-//                Log.default.write(error.localizedDescription)
                 outputs.append("[]")
             }
         } else {
@@ -137,8 +137,7 @@ struct Version: ParsableCommand {
     )
     
     func run() throws {
-        let stream = StdioOutputStream.stdout
-        stream.write("current version \(version)\n")
+        print("current version \(version)")
     }
 }
 
@@ -162,14 +161,10 @@ struct OutputTypeList: ParsableCommand {
     )
     
     func run() throws {
-        let logger = Logger(label: "quality") { label -> LogHandler in
-            DefaultStdioOutputLogHandler(label: label, isVerbose: false)
-        }
-        
-        logger.info("Available Output Type")
+        print("Available Output Type")
         
         OutputType.allCases.forEach { value in
-            logger.info("- \(value)")
+            print("- \(value)")
         }
     }
 }
@@ -182,14 +177,10 @@ struct QualityList: ParsableCommand {
     )
     
     func run() throws {
-        let logger = Logger(label: "quality") { label -> LogHandler in
-            DefaultStdioOutputLogHandler(label: label, isVerbose: false)
-        }
-        
-        logger.info("Available Quality")
+        print("Available Quality")
         
         GIFQuality.allCases.forEach { quality in
-            logger.info("- \(quality)")
+            print("- \(quality)")
         }
     }
 }
@@ -294,7 +285,11 @@ struct Record: ParsableCommand {
      */
     private var shellProvider: ShellProvider {
         #if DEBUG
-        return mode != nil ? mode!.shellProvider : DefaultShellProvider.shared
+        if let mode = mode {
+            return mode.shellProvider
+        } else {
+            return DefaultShellProvider.shared
+        }
         #else
         return DefaultShellProvider.shared
         #endif
@@ -375,11 +370,11 @@ struct Record: ParsableCommand {
     }
     
     func run() throws {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMddHHmmss"
+        let logFileName = dateFormatter.string(from: Date())
+        
         var logger = Logger(label: "record") { label -> LogHandler in
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyyMMddHHmmss"
-            let logFileName = dateFormatter.string(from: Date())
-            
             return MultiplexLogHandler([
                 DefaultStdioOutputLogHandler(label: label, isVerbose: isVerbose),
                 WriteToFileLogHandler(label: label, fileName: logFileName)
@@ -400,7 +395,7 @@ struct Record: ParsableCommand {
         }
         
         logger.debug("mimiq is running on mac")
-        logger.shellOutput(shell(arguments: ["sw_vers"]).output) // log computer info, like os version
+        logger.shellOutput(Shell.execute(arguments: ["sw_vers"]).output) // log computer info, like os version
         
         // MARK: - Configure Environment
         
@@ -424,7 +419,7 @@ struct Record: ParsableCommand {
             }
             
             logger.debug("Homebrew is installed")
-            logger.shellOutput(shell(arguments: ["brew --version"]).output)
+            logger.shellOutput(Shell.execute(arguments: ["brew --version"]).output)
         }
         
         
@@ -457,7 +452,7 @@ struct Record: ParsableCommand {
         logger.debug("simulator to record on \(movSource)")
         
         // log xcode version
-        let xcodeBuildVersion = shell(arguments: ["xcodebuild -version"])
+        let xcodeBuildVersion = Shell.execute(arguments: ["xcodebuild -version"])
         logger.shellOutput(xcodeBuildVersion.output ?? "no ouput")
         logger.shellOutput(xcodeBuildVersion.errorOuput ?? "no error ouput")
         
@@ -466,7 +461,7 @@ struct Record: ParsableCommand {
         group.enter()
         
         // start record simulator
-        shellProvider.recordSimulator(target: mimiqTarget, movTarget: movSource, printOutLog: isVerbose, completion: { recordResult in
+        shellProvider.recordSimulator(target: mimiqTarget, movTarget: movSource, logger: logger, completion: { recordResult in
             logger.debug("record simulator finish with status \(recordResult.status)")
             
             guard recordResult.status == 0 else {
@@ -493,27 +488,27 @@ struct Record: ParsableCommand {
         logger.info("⚙️ Creating output...")
         
         let outputTargetPath = resultPath + mimiqFileName + "." + output.fileExtension
-        let generateGIFResult = shellProvider.generateOutput(
+        let generateOutputResult = shellProvider.generateOutput(
             output,
             movSource: movSource,
             outputTarget: outputTargetPath,
             quality: quality,
             customFFMpegPath: customFFMpegPath,
-            printOutLog: isVerbose
+            logger: logger
         )
         
-        guard generateGIFResult.status == 0 else {
+        guard generateOutputResult.status == 0 else {
             // clear generated cache
             removeCache()
             logger.debug("error generating output")
-            logger.shellOutput(generateGIFResult.output)
-            logger.shellOutput(generateGIFResult.errorOuput)
+            logger.shellOutput(generateOutputResult.output)
+            logger.shellOutput(generateOutputResult.errorOuput)
             logger.error("💥 Failed on Creating output, Please Try Again")
             Darwin.exit(EXIT_FAILURE)
         }
         
         logger.debug("success generating output")
-        logger.shellOutput(generateGIFResult.output ?? "")
+        logger.shellOutput(generateOutputResult.output ?? "")
         logger.debug("output generated at \(outputTargetPath)")
         logger.info("✅ Grab your output at \(outputTargetPath)")
     }
