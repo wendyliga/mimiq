@@ -216,7 +216,10 @@ struct Record: ParsableCommand {
         Record your Xcode simulator and convert it to GIF, MP4 or Mov
         
         """,
-        subcommands: [Quality.self]
+        subcommands: [
+            QualityList.self,
+            OutputTypeList.self
+        ]
     )
     #endif
     

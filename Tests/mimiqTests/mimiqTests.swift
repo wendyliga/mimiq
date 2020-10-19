@@ -102,7 +102,7 @@ final class mimiqTests: XCTestCase {
     }
     
     func test_checkVersion() throws {
-        let expected = "current version 0.5.0\n"
+        let expected = "current version 0.5.1\n"
         let shellResult = try shellProcess(args: ["version"])
         
         XCTAssertEqual(shellResult.output?.rawValue, expected)
