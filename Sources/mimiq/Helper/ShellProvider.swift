@@ -25,15 +25,8 @@ SOFTWARE.
 import Explorer
 import Foundation
 import ConsoleIO
-
-struct Runtime: Decodable {
-    let identifier: String
-}
-
-struct Simulator: Codable {
-    let udid: UUID
-    let name: String
-}
+import Logging
+import mimiq_core
 
 // MARK: - Shell Provider
 
@@ -44,8 +37,8 @@ protocol ShellProvider {
     var isHomebrewInstalled: Bool { get }
     var isFFMpegInstalled: Bool { get }
     var availableSimulators: [Simulator] { get }
-    func recordSimulator(target: Simulator, movTarget: String, printOutLog: Bool, completion: @escaping (ShellResult) -> Void)
-    func generateOutput(_ type: OutputType, movSource: String, outputTarget: String, quality: GIFQuality, customFFMpegPath: String?, printOutLog: Bool) -> ShellResult
+    func recordSimulator(target: Simulator, movTarget: String, logger: Logger?, completion: @escaping (Shell.Result) -> Void)
+    func generateOutput(_ type: OutputType, movSource: String, outputTarget: String, quality: GIFQuality, customFFMpegPath: String?, logger: Logger?) -> Shell.Result
     func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error>
 }
 
@@ -53,19 +46,19 @@ final class DefaultShellProvider: ShellProvider {
     static let shared = DefaultShellProvider()
     
     var isHomebrewInstalled: Bool {
-        shell(arguments: [#"! homebrew_loc="$(type -p "brew")" || [[ -z $homebrew_loc ]];"#]).status == 1
+        Shell.execute(arguments: [#"! homebrew_loc="$(type -p "brew")" || [[ -z $homebrew_loc ]];"#]).status == 1
     }
     
     var isFFMpegInstalled: Bool {
-        shell(arguments: [#"! ffmpeg_loc="$(type -p "ffmpeg")" || [[ -z $ffmpeg_loc ]];"#]).status == 1
+        Shell.execute(arguments: [#"! ffmpeg_loc="$(type -p "ffmpeg")" || [[ -z $ffmpeg_loc ]];"#]).status == 1
     }
     
     var availableSimulators: [Simulator] {
-        let simulatorRuntimeListShellExecution = shell(arguments: ["xcrun simctl list -v runtimes --json"])
+        let simulatorRuntimeListShellExecution = Shell.execute(arguments: ["xcrun simctl list -v runtimes --json"])
         
         guard
             simulatorRuntimeListShellExecution.status == 0,
-            let runtimeListRawData = simulatorRuntimeListShellExecution.output?.data(using: .utf8),
+            let runtimeListRawData = simulatorRuntimeListShellExecution.output?.rawValue.data(using: .utf8),
             let runtimes = try? JSONDecoder().decode([Runtime].self, from: runtimeListRawData, keyPath: "runtimes")
         else {
             return []
@@ -88,11 +81,11 @@ final class DefaultShellProvider: ShellProvider {
          there's no way to map inside device json object with decodable, so JSONSerialization comes in help
          */
 
-        let simulatorListShellExecution = shell(arguments: ["xcrun simctl list -v devices booted --json"])
+        let simulatorListShellExecution = Shell.execute(arguments: ["xcrun simctl list -v devices booted --json"])
         
         guard
             simulatorListShellExecution.status == 0,
-            let simulatorListRawData = simulatorListShellExecution.output?.data(using: .utf8),
+            let simulatorListRawData = simulatorListShellExecution.output?.rawValue.data(using: .utf8),
             let simulatorListJsonSerialization = try? JSONSerialization.jsonObject(with: simulatorListRawData, options: .allowFragments) as? [String: Any],
             let deviceJsonSeralization = simulatorListJsonSerialization["devices"] as? [String: [[String: Any]]]
         else {
@@ -115,15 +108,15 @@ final class DefaultShellProvider: ShellProvider {
     func recordSimulator(
         target: Simulator,
         movTarget: String,
-        printOutLog: Bool,
-        completion: @escaping (ShellResult) -> Void
+        logger: Logger?,
+        completion: @escaping (Shell.Result) -> Void
     ) {
         let recordCommand = "xcrun simctl io \(target.udid.uuidString) recordVideo -f \(movTarget)"
         let recordMessage = "🔨 Recording Simulator \(target.name) with UDID \(target.udid)... Press Enter to Stop.)"
         
-        Log.default.write(#"start recording with command "\#(recordCommand)""#, printOut: printOutLog)
+        logger?.debug(#"start recording with command "\#(recordCommand)""#)
         
-        mustInteruptShell(arguments: [recordCommand], message: recordMessage, completion: completion)
+        Shell.mustInterupt(arguments: [recordCommand], message: recordMessage, logger: logger, completion: completion)
     }
     
     func generateOutput(
@@ -132,8 +125,8 @@ final class DefaultShellProvider: ShellProvider {
         outputTarget: String,
         quality: GIFQuality,
         customFFMpegPath: String?,
-        printOutLog: Bool
-    ) -> ShellResult {
+        logger: Logger?
+    ) -> Shell.Result {
         var command = [String]()
         
         if let customFFMpegpath = customFFMpegPath {
@@ -143,15 +136,15 @@ final class DefaultShellProvider: ShellProvider {
         
         switch type {
         case .gif:
-            Log.default.write("Output will be created on \(outputTarget), with \(quality) quality", printOut: printOutLog)
+            logger?.info("Output will be created on \(outputTarget), with \(quality) quality")
             command.append(quality.ffmpegCommand(source: movSource, target: outputTarget))
         case .mov, .mp4:
-            Log.default.write("Output will be created on \(outputTarget)", printOut: printOutLog)
+            logger?.info("Output will be created on \(outputTarget)")
             command.append(type.ffmpegCommand(source: movSource, target: outputTarget))
         }
         
-        Log.default.write(#"executing "\#(command)""#, printOut: printOutLog)
-        return shell(arguments: [command.joined(separator: ";")])
+        logger?.debug(#"executing "\#(command)""#)
+        return Shell.execute(arguments: [command.joined(separator: ";")])
     }
     
     func list(at path: String, withFolder isFolderIncluded: Bool, isRecursive: Bool) -> Result<[Explorable], Error> {
