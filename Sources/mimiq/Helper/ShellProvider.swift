@@ -28,15 +28,6 @@ import ConsoleIO
 import Logging
 import mimiq_core
 
-struct Runtime: Decodable {
-    let identifier: String
-}
-
-struct Simulator: Codable {
-    let udid: UUID
-    let name: String
-}
-
 // MARK: - Shell Provider
 
 /**
