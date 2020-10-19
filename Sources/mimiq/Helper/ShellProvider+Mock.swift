@@ -24,7 +24,8 @@ SOFTWARE.
 
 import Explorer
 import Foundation
-
+import Logging
+import mimiq_core
 
 // MARK: - Mock Shell Provider
 
@@ -50,19 +51,20 @@ extension ShellProvider {
     func recordSimulator(
         target: Simulator,
         movTarget: String,
-        printOutLog: Bool,
-        completion: @escaping (ShellResult) -> Void
+        logger: Logger?,
+        completion: @escaping (Shell.Result) -> Void
     ) {
         completion((0, nil, nil))
     }
     
-    func convertMovToGif(
+    func generateOutput(
+        _ type: OutputType,
         movSource: String,
-        gifTarget: String,
+        outputTarget: String,
         quality: GIFQuality,
         customFFMpegPath: String?,
-        printOutLog: Bool
-    ) -> ShellResult {
+        logger: Logger?
+    ) -> Shell.Result {
         (0, nil, nil)
     }
     
@@ -89,7 +91,7 @@ final class NoneSimulatorShellProvider: ShellProvider {
 
 final class NoHomebrewShellProvider: ShellProvider {
     var isHomebrewInstalled: Bool {
-        false
+        return false
     }
 }
 
@@ -103,21 +105,22 @@ final class FailedRecordShellProvider: ShellProvider {
     func recordSimulator(
         target: Simulator,
         movTarget: String,
-        printOutLog: Bool,
-        completion: @escaping (ShellResult) -> Void
+        logger: Logger?,
+        completion: @escaping (Shell.Result) -> Void
     ) {
         completion((1, nil, "Failed to create mov file"))
     }
 }
 
 final class FailedConvertingGIFShellProvider: ShellProvider {
-    func convertMovToGif(
+    func generateOutput(
+        _ type: OutputType,
         movSource: String,
-        gifTarget: String,
+        outputTarget: String,
         quality: GIFQuality,
         customFFMpegPath: String?,
-        printOutLog: Bool
-    ) -> ShellResult {
+        logger: Logger?
+    ) -> Shell.Result {
         (1, nil, "Failed to convert MOV to GIF")
     }
 }

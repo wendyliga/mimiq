@@ -6,17 +6,24 @@ import PackageDescription
 let package = Package(
     name: "mimiq",
     products: [
-        .executable(name: "mimiq", targets: ["mimiq"])
+        .executable(name: "mimiq", targets: ["mimiq"]),
+        .library(name: "MimiqCore", targets: ["mimiq-core"])
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-argument-parser", .upToNextMinor(from: "0.0.1")),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.1"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.4.0"),
+        .package(url: "https://github.com/pointfreeco/swift-tagged.git", from: "0.5.0"),
         .package(url: "https://github.com/wendyliga/ConsoleIO.git", .upToNextMajor(from: "1.0.0")),
-        .package(url: "https://github.com/wendyliga/Explorer.git", from: "0.0.3"),
+        .package(url: "https://github.com/wendyliga/Explorer.git", from: "0.0.3")
     ],
     targets: [
         .target(
             name: "mimiq",
-            dependencies: ["ArgumentParser", "Explorer", "ConsoleIO"]
+            dependencies: ["ArgumentParser", "Explorer", "ConsoleIO", "Logging", "Tagged", "mimiq-core"]
+        ),
+        .target(
+            name: "mimiq-core",
+            dependencies: ["ConsoleIO", "Logging", "Tagged"]
         ),
         .testTarget(
             name: "mimiqTests",
