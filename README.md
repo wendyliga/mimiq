@@ -21,6 +21,12 @@
 
 mimiq is simple executable to record your Xcode simulator and convert it to several video type like gif, mp4 or mov.
 
+# Sunsetting
+on Xcode 12.5, Apple is supporting record mp4 and gif directly on Simulator GUI.
+hold Options, and screenshot button will swap into record.
+
+![](https://user-images.githubusercontent.com/16457495/116653947-62b16d80-a9b2-11eb-81ff-34d862b28d57.png)
+
 # Installation
 
 ## Homebrew
